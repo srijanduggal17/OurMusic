@@ -18,6 +18,7 @@ var client_secret = 'a40cc81bc12a4ea0adcb04a8638bd1f2'; // Your secret
 var redirect_uri = 'http://localhost:8889/callback/'; // Your redirect uri
 
 var mysongsarr = [];
+var myplaylistobjarr = [];
 
 /**
  * Generates a random string containing numbers and letters
@@ -115,41 +116,8 @@ app.get('/callback', function(req, res) {
 						mysongsarr.push(body.items[i].track.id);
 					}
 
-					getMySongs(totalsongs, refresh_token);
-					// getAccTok(refresh_token).then(res => {
-					// 	console.log("done");
-						
-					// 	let accesstok = res;
-
-					// 	let playlim = querystring.stringify({
-					// 		limit: 10
-					// 	});
-
-					// 	var playops = {
-					// 		url: 'https://api.spotify.com/v1/users/laurencvossler/playlists?' + playlim + '',
-					// 		headers: { 'Authorization': 'Bearer ' + accesstok },
-					// 		json: true,
-					// 	};
-
-					// 	request.get(playops, function(error, response, body) {
-					// 		console.log("helloooo")
-					// 		// console.log(body);
-					// 	});
-
-					// 	let playlim2 = querystring.stringify({
-					// 		limit: 10
-					// 	});
-
-					// 	var playops2 = {
-					// 		url: 'https://api.spotify.com/v1/me/tracks?' + playlim + '',
-					// 		headers: { 'Authorization': 'Bearer ' + accesstok },
-					// 		json: true,
-					// 	};
-
-					// 	request.get(playops2, function(error, response, body) {
-					// 		// console.log(body);
-					// 	});
-					// });
+					getMySongs(totalsongs, access_token);
+					getMyPlaylistSongs(access_token);
 				});
 
 				// we can also pass the token to the browser to make requests from there
@@ -171,63 +139,135 @@ app.get('/callback', function(req, res) {
 function getMySongs(tot, token) {
 	if (tot > 50) {
 		let prevoffset = 0;
-		let numtimes = Math.ceil(tot/50);
-		for (let i = 0; i < 3; i++) {
-			let params = querystring.stringify({
+		let numtimes = Math.ceil((tot-50)/50);
+		let promarr = [];
+		for (let i = 0; i < numtimes; i++) {
+			let paramobj = {
 				limit: 50,
-				offset: prevoffset + 10
-			});
-			prevoffset = params.offset;
+				offset: prevoffset + 50
+			}; 
+			let params = querystring.stringify(paramobj);
+			prevoffset = paramobj.offset;
 
-			getTrackSet(params, token).then(() => {
-				console.log(bod);
-				console.log("ya");			
-			})
-			.catch(err => {
-				console.log(err);
-			});
-
+			promarr.push(getTrackSet(params, token));
 		}
+
+		Promise.all(promarr)
+			.then(() => {
+				console.log("woohoo");
+				console.log(mysongsarr.length);
+			})
+			.catch(error => {
+				console.log("buabuabua");
+			});
 	}
 }
 
 function getTrackSet(para, toke) {
-	getAccTok(toke).then(res => {
-		let acctok = res;
-		let options = {
-			method: 'GET',
-			url: 'https://api.spotify.com/v1/me/tracks?' + para + '',
-			headers: { 'Authorization': 'Bearer ' + acctok },
-			json: true
-		};
+	let options = {
+		method: 'GET',
+		url: 'https://api.spotify.com/v1/me/tracks?' + para + '',
+		headers: { 'Authorization': 'Bearer ' + toke },
+		json: true
+	};
 
-		return new Promise ((resolve, reject) => {
-			rp(options)
-				.then(body => {
-					resolve(body);
-				})
-				.catch(error => {
-					console.error("Error obtaining access token from refresh token");
-					console.log(error);
-					reject("Tracks not received");
-				});
-		});	
+	return new Promise ((resolve, reject) => {
+		rp(options)
+			.then(body => {
+				let resultarr = body.items;
+				for (const ind in resultarr) {
+					mysongsarr.push(resultarr[ind].track.id)
+				}
+				resolve(body);
+			})
+			.catch(error => {
+				console.error("Error");
+				console.log(error);
+				reject("sorry");
+			});
 	});
-	// rp(options)
-	// 	.then(body => {
-	// 		let totalsongs = body.total;
+}
 
-	// 		for (let i = 0; i < body.items.length; i++) {
-	// 			mysongsarr.push(body.items[i].track.id);
-	// 		}
-	// 		console.log("doooo");
-	// 		continloop = true;
-	// 	})
-	// 	.catch(error => {
-	// 		console.error("Error obtaining tracks");
-	// 		console.log(error);
-	// 		reject("Tracks not received");
-	// 	});
+function getMyPlaylistSongs(token) {
+	let params = querystring.stringify({
+		limit: 50
+	});
+
+	let options = {
+		method: 'GET',
+		url: 'https://api.spotify.com/v1/me/playlists?' + params + '',
+		headers: { 'Authorization': 'Bearer ' + token },
+		json: true
+	};
+
+	rp(options)
+		.then(body => {
+			let totalsongs = body.total;
+
+			for (let i = 0; i < body.items.length; i++) {
+				myplaylistobjarr.push(body.items[i].tracks);
+			}
+
+			getPlaylist(totalsongs, token)
+		})
+		.catch(error => {
+			console.error("Error");
+			console.log(error);
+		});
+}
+
+function getPlaylist(tot, toke) {
+	if (tot > 50) {
+		let prevoffset = 0;
+		let numtimes = Math.ceil((tot-50)/50);
+		let promarr = [];
+		for (let i = 0; i < numtimes; i++) {
+			let paramobj = {
+				limit: 50,
+				offset: prevoffset + 50
+			}; 
+			let params = querystring.stringify(paramobj);
+			prevoffset = paramobj.offset;
+
+			promarr.push(getPlaylistObjs(params, token));
+		}
+
+		Promise.all(promarr)
+			.then(() => {
+				console.log("woohoo");
+				console.log(myplaylistobjarr);
+				console.log(myplaylistobjarr.length);
+			})
+			.catch(error => {
+				console.log("buabuabua");
+			});
+	}
+}
+
+function getPlaylistObjs(para, token) {
+	let options = {
+		method: 'GET',
+		url: 'https://api.spotify.com/v1/me/playlists?' + para + '',
+		headers: { 'Authorization': 'Bearer ' + token },
+		json: true
+	};
+
+	return new Promise ((resolve, reject) => {
+		rp(options)
+			.then(body => {
+				let resultarr = body.items;
+
+				for (const ind in resultarr) {
+					myplaylistobjarr.push(resultarr[ind].tracks);
+				}
+				resolve(body);
+			})
+			.catch(error => {
+				console.error("Error");
+				console.log(error);
+				reject("sorry");
+			});
+	});
 }
 
 app.get('/refresh_token', function(req, res) {
