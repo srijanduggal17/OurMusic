@@ -1,0 +1,9 @@
+get initial access and refresh token
+
+get total saved tracks
+- loop until we get all track objects
+get total playlist number
+- loop until we get all playlist objects
+---- loop until we get all track objects
+
+once  3-7 are done, get ids from track objects
