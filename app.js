@@ -55,10 +55,11 @@ function mainCallback(req, res) {
 	getInitialTokens(req, res)
 	.then(getMyData)
 	.then(combineArrays)
+	.then(getUniqueIds)
 	.then(arr => {
 		console.log("done");
 		console.log(arr);
-		console.log(arr.length);
+		console.log(arr.size);
 	})
 	.catch(err => {
 		console.log(err);
@@ -80,7 +81,7 @@ function getInitialTokens(req, res) {
 		res.clearCookie(stateKey);
 		//Request access and refresh tokens
 		///////////////////Section 2//////////////////////////////
-		var authOptions = {
+		let authOptions = {
 			method: 'POST',
 			url: 'https://accounts.spotify.com/api/token',
 			form: {
@@ -127,8 +128,8 @@ function getInitialTokens(req, res) {
 
 function getMyData (toks) {
 	console.log("getMyData");
-	let savedtrackspromise = savedTracks(toks[0]);
-	let playlisttrackspromise = playlistTracks(toks[0]);
+	var savedtrackspromise = savedTracks(toks[0]);
+	var playlisttrackspromise = playlistTracks(toks[0]);
 
 	return new Promise((resolve, reject) => {
 		Promise.all([savedtrackspromise, playlisttrackspromise])
@@ -163,7 +164,7 @@ function getTotalSavedTracks(token) {
 		rp(options)
 		.then(body => {
 			console.log('Total saved tracks received');
-			let outObj = {
+			var outObj = {
 				totalsongs: body.total,
 				token: token
 			}
@@ -177,19 +178,14 @@ function getTotalSavedTracks(token) {
 
 function getSavedTrackObjects(inObj) {
 	console.log("getSavedTrackObjects");
-	let token = inObj.token;
-	let totalnum = inObj.totalsongs;
+	var token = inObj.token;
+	var totalnum = inObj.totalsongs;
 
-	let objArray = [];
-	let promiseArr = [];
+	var objArray = [];
+	var promiseArr = [];
 
-	function addToObjArr(arr) {
-		console.log("addToObjArr");
-		objArray.push(...arr);
-	}
-
-	let prevoffset = -50;
-	let numtimes = Math.ceil(totalnum/50);
+	var prevoffset = -50;
+	var numtimes = Math.ceil(totalnum/50);
 
 
 	for (let i = 0; i < numtimes; i++) {
@@ -203,7 +199,7 @@ function getSavedTrackObjects(inObj) {
 		currentprom = new Promise((resolve, reject) => {
 			trackObjectRequest(token, params)
 			.then(arr => {
-				addToObjArr(arr);
+				objArray.push(...arr);
 				resolve("resolved");
 			});
 		});
@@ -225,7 +221,7 @@ function getSavedTrackObjects(inObj) {
 
 function trackObjectRequest(token, params) {
 	console.log("trackObjectRequest");
-	let options = {
+	var options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/tracks?' + params + '',
 		headers: { 'Authorization': 'Bearer ' + token },
@@ -235,8 +231,8 @@ function trackObjectRequest(token, params) {
 	return new Promise ((resolve, reject) => {
 		rp(options)
 			.then(body => {
-				let resultarr = body.items;
-				let newarr = [];
+				var resultarr = body.items;
+				var newarr = [];
 				for (let i = 0; i < resultarr.length; i++) {
 					newarr.push(resultarr[i].track);
 				}
@@ -273,7 +269,7 @@ function getTotalPlaylists(token) {
 		rp(options)
 		.then(body => {
 			console.log('Total playlists received');
-			let outObj = {
+			var outObj = {
 				totalplaylists: body.total,
 				token: token
 			}
@@ -287,19 +283,14 @@ function getTotalPlaylists(token) {
 
 function getPlaylistObjects(inObj) {
 	console.log("getPlaylistObjects");
-	let totalplaylists = inObj.totalplaylists;
-	let token = inObj.token;
+	var totalplaylists = inObj.totalplaylists;
+	var token = inObj.token;
 
-	let objArray = [];
-	let promiseArr = [];
+	var objArray = [];
+	var promiseArr = [];
 
-	function addToObjArr(arr) {
-		console.log("addToObjArr");
-		objArray.push(...arr);
-	}
-
-	let prevoffset = -50;
-	let numtimes = Math.ceil(totalplaylists/50);
+	var prevoffset = -50;
+	var numtimes = Math.ceil(totalplaylists/50);
 
 	for (let i = 0; i < numtimes; i++) {
 		let paramobj = {
@@ -312,11 +303,11 @@ function getPlaylistObjects(inObj) {
 		currentprom = new Promise((resolve, reject) => {
 			playlistObjectRequest(token, params)
 			.then(arr => {
-				let playlistArr = [];
+				var playlistArr = [];
 				for (let j = 0; j < arr.length; j++) {
 					playlistArr.push(arr[j].tracks);
 				}
-				addToObjArr(playlistArr);
+				objArray.push(...playlistArr);
 				resolve("resolved");
 			});
 		});
@@ -342,7 +333,7 @@ function getPlaylistObjects(inObj) {
 
 function playlistObjectRequest(token, params) {
 	console.log("playlistObjectRequest");
-	let options = {
+	var options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/playlists?' + params + '',
 		headers: { 'Authorization': 'Bearer ' + token },
@@ -352,7 +343,7 @@ function playlistObjectRequest(token, params) {
 	return new Promise ((resolve, reject) => {
 		rp(options)
 			.then(body => {
-				let resultarr = body.items;
+				var resultarr = body.items;
 				resolve(resultarr);
 			})
 			.catch(error => {
@@ -365,16 +356,11 @@ function playlistObjectRequest(token, params) {
 
 function getTotalPlaylistTrackObjects(inObj) {
 	console.log("getTotalPlaylistTrackObjects");
-	let token = inObj.token;
-	let data = inObj.data;
+	var token = inObj.token;
+	var data = inObj.data;
 
-	let objArray = [];
-	let promiseArr = [];
-
-	function addToObjArr(arr) {
-		console.log("addToObjArr");
-		objArray.push(...arr);
-	}
+	var objArray = [];
+	var promiseArr = [];
 
 	for (var i = 0; i < data.length; i++) {
 		let obj = {
@@ -386,7 +372,7 @@ function getTotalPlaylistTrackObjects(inObj) {
 		prom = new Promise((resolve, reject) => {
 			getObjectsFromPlaylist(obj)
 			.then(arr => {
-				addToObjArr(arr);
+				objArray.push(...arr);
 				resolve("resolved");
 			});
 		});
@@ -404,20 +390,15 @@ function getTotalPlaylistTrackObjects(inObj) {
 
 function getObjectsFromPlaylist(inObj) {
 	console.log("getObjectsFromPlaylist");
-	let token = inObj.token;
-	let totalplaylisttracks = inObj.totalplaylisttracks;
-	let id = inObj.id;
+	var token = inObj.token;
+	var totalplaylisttracks = inObj.totalplaylisttracks;
+	var id = inObj.id;
 
-	let objArray = [];
-	let promiseArr = [];
+	var objArray = [];
+	var promiseArr = [];
 
-	function addToObjArr(arr) {
-		console.log("addToObjArr");
-		objArray.push(...arr);
-	}
-
-	let prevoffset = -50;
-	let numtimes = Math.ceil(totalplaylisttracks/50);
+	var prevoffset = -50;
+	var numtimes = Math.ceil(totalplaylisttracks/50);
 
 	for (let i = 0; i < numtimes; i++) {
 		let paramobj = {
@@ -430,7 +411,7 @@ function getObjectsFromPlaylist(inObj) {
 		currentprom = new Promise((resolve, reject) => {
 			playlistTrackObjectRequest(token, params, id)
 			.then(arr => {
-				addToObjArr(arr);
+				objArray.push(...arr);
 				resolve("resolved");
 			});
 		});
@@ -452,7 +433,7 @@ function getObjectsFromPlaylist(inObj) {
 
 function playlistTrackObjectRequest(token, params, href) {
 	console.log("playlistTrackObjectRequest");
-	let options = {
+	var options = {
 		method: 'GET',
 		url: href + '?' + params,
 		headers: { 'Authorization': 'Bearer ' + token },
@@ -462,8 +443,8 @@ function playlistTrackObjectRequest(token, params, href) {
 	return new Promise ((resolve, reject) => {
 		rp(options)
 			.then(body => {
-				let resultarr = body.items;
-				let newarr = [];
+				var resultarr = body.items;
+				var newarr = [];
 				for (let i = 0; i < resultarr.length; i++) {
 					newarr.push(resultarr[i].track);
 				}
@@ -478,9 +459,17 @@ function playlistTrackObjectRequest(token, params, href) {
 }
 
 function combineArrays(arr) {
-	let newarr = arr[0];
+	var newarr = arr[0];
 	newarr.push(...arr[1]);
 	return newarr;
+}
+
+function getUniqueIds(arr) {
+	var mydataset = new Set();
+	for (let i = 0; i < arr.length; i++) {
+		mydataset.add(arr[i].id);
+	}
+	return mydataset;
 }
 
 app.get('/refresh_token', function(req, res) {
