@@ -115,11 +115,13 @@ function getInitialTokens(req, res) {
 }
 
 function getMyData (toks) {
+	console.log("getMyData");
 	let savedtrackspromise = savedTracks(toks[0]);
 	let playlisttrackspromise = playlistTracks(toks[0]);
 	return new Promise((resolve, reject) => {
 		Promise.all([savedtrackspromise, playlisttrackspromise])
 		.then((results) => {
+			console.log("yo we just finished dog");
 			//combine into one array
 			resolve(results);
 		})
@@ -127,6 +129,7 @@ function getMyData (toks) {
 }
 
 function savedTracks(token) {
+	console.log("savedTracks");
 	return new Promise((resolve, reject) => {
 		getTotalSavedTracks(token)
 		.then(getSavedTrackObjects)
@@ -137,6 +140,7 @@ function savedTracks(token) {
 }
 
 function getTotalSavedTracks(token) {
+	console.log("getTotalSavedTracks");
 	var options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/tracks?',
@@ -161,6 +165,7 @@ function getTotalSavedTracks(token) {
 }
 
 function getSavedTrackObjects(inObj) {
+	console.log("getSavedTrackObjects");
 	let token = inObj.token;
 	let totalnum = inObj.totalsongs;
 
@@ -168,8 +173,8 @@ function getSavedTrackObjects(inObj) {
 	let promiseArr = [];
 
 	function addToObjArr(arr) {
-		objArray.push(arr);
-		resolve("added!");
+		console.log("addToObjArr");
+		objArray.push(...arr);
 	}
 
 	let prevoffset = -50;
@@ -186,7 +191,10 @@ function getSavedTrackObjects(inObj) {
 
 		currentprom = new Promise((resolve, reject) => {
 			trackObjectRequest(token, params)
-			.then(addToObjArr)
+			.then(arr => {
+				addToObjArr(arr);
+				resolve("resolved");
+			});
 		});
 
 		promiseArr.push(currentprom);
@@ -205,6 +213,7 @@ function getSavedTrackObjects(inObj) {
 }
 
 function trackObjectRequest(token, params) {
+	console.log("trackObjectRequest");
 	let options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/tracks?' + params + '',
@@ -262,6 +271,7 @@ function getTotalPlaylists(token) {
 }
 
 function getPlaylistObjects(inObj) {
+	console.log("getPlaylistObjects");
 	let totalplaylists = inObj.totalplaylists;
 	let token = inObj.token;
 
@@ -269,8 +279,8 @@ function getPlaylistObjects(inObj) {
 	let promiseArr = [];
 
 	function addToObjArr(arr) {
-		objArray.push(arr);
-		resolve("added!");
+		console.log("addToObjArr");
+		objArray.push(...arr);
 	}
 
 	let prevoffset = -50;
@@ -286,7 +296,14 @@ function getPlaylistObjects(inObj) {
 
 		currentprom = new Promise((resolve, reject) => {
 			playlistObjectRequest(token, params)
-			.then(addToObjArr)
+			.then(arr => {
+				let playlistArr = [];
+				for (let j = 0; j < arr.length; j++) {
+					playlistArr.push(arr[j].tracks);
+				}
+				addToObjArr(playlistArr);
+				resolve("resolved");
+			});
 		});
 
 		promiseArr.push(currentprom);
@@ -309,6 +326,7 @@ function getPlaylistObjects(inObj) {
 }
 
 function playlistObjectRequest(token, params) {
+	console.log("playlistObjectRequest");
 	let options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/playlists?' + params + '',
@@ -331,6 +349,7 @@ function playlistObjectRequest(token, params) {
 }
 
 function getTotalPlaylistTrackObjects(inObj) {
+	console.log("getTotalPlaylistTrackObjects");
 	let token = inObj.token;
 	let data = inObj.data;
 
@@ -338,23 +357,23 @@ function getTotalPlaylistTrackObjects(inObj) {
 	let promiseArr = [];
 
 	function addToObjArr(arr) {
-		objArray.push(arr);
-		resolve("added!");
+		console.log("addToObjArr");
+		objArray.push(...arr);
 	}
 
 	for (var i = 0; i < data.length; i++) {
-		let currentplaylist = data[i];
-		// find id
+		let obj = {
+			token: token,
+			totalplaylisttracks: data[i].total,
+			id: data[i].href
+		}
 
 		prom = new Promise((resolve, reject) => {
-			getTotalPlaylistTracks(token, id)
-			.then(getObjectsFromPlaylist)
-			.then(addToObjArr)
-
-			//Replace the upper 3 lines with:
-			//	Get total playlist tracks using the total key under tracks
-			//	getObjectsFromPlaylist
-			//	.then(addToObjArr)
+			getObjectsFromPlaylist(obj)
+			.then(arr => {
+				addToObjArr(arr);
+				resolve("resolved");
+			});
 		});
 
 		promiseArr.push(prom);
@@ -369,6 +388,7 @@ function getTotalPlaylistTrackObjects(inObj) {
 }
 
 function getObjectsFromPlaylist(inObj) {
+	console.log("getObjectsFromPlaylist");
 	let token = inObj.token;
 	let totalplaylisttracks = inObj.totalplaylisttracks;
 	let id = inObj.id;
@@ -377,12 +397,12 @@ function getObjectsFromPlaylist(inObj) {
 	let promiseArr = [];
 
 	function addToObjArr(arr) {
-		objArray.push(arr);
-		resolve("added!");
+		console.log("addToObjArr");
+		objArray.push(...arr);
 	}
 
 	let prevoffset = -50;
-	let numtimes = Math.ceil(totalplaylists/50);
+	let numtimes = Math.ceil(totalplaylisttracks/50);
 
 	for (let i = 0; i < numtimes; i++) {
 		let paramobj = {
@@ -394,7 +414,10 @@ function getObjectsFromPlaylist(inObj) {
 
 		currentprom = new Promise((resolve, reject) => {
 			playlistTrackObjectRequest(token, params, id)
-			.then(addToObjArr)
+			.then(arr => {
+				addToObjArr(arr);
+				resolve("resolved");
+			});
 		});
 
 		promiseArr.push(currentprom);
@@ -412,10 +435,11 @@ function getObjectsFromPlaylist(inObj) {
 	});
 }
 
-function playlistTrackObjectRequest(token, params, id) {
+function playlistTrackObjectRequest(token, params, href) {
+	console.log("playlistTrackObjectRequest");
 	let options = {
 		method: 'GET',
-		url: 'https://api.spotify.com/v1/me/playlists/' + id + '/tracks?' + params + '',
+		url: href + '?' + params,
 		headers: { 'Authorization': 'Bearer ' + token },
 		json: true
 	};
