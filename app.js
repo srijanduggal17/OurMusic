@@ -67,15 +67,10 @@ function secondCallback(req, res) {
 		friendsongscomplete = Promise.resolve(inObj);
 	})
 	.then(getCommonIds)
-	// .then(arr => {
-	// 	console.log("combos");
-	// 	console.log(arr);
-	// 	console.log(arr.size);
-	// 	res.redirect("postcreation.html");
-
-	// 	return arr;
-	// })
-	.then(createPlaylist);
+	.then(createPlaylist)
+	.then(() => {
+		res.redirect("postcreation.html");
+	});
 }
 
 function createPlaylist(inObj) {
@@ -421,12 +416,12 @@ function getInitialTokens(req, res) {
 				var access_token = body.access_token,
 				refresh_token = body.refresh_token;
 
-				// we can also pass the token to the browser to make requests from there
-				res.redirect('/#' +
-					querystring.stringify({
-						access_token: access_token,
-						refresh_token: refresh_token
-					}));
+				// res.redirect('/#' +
+				// 	querystring.stringify({
+				// 		access_token: access_token,
+				// 		refresh_token: refresh_token
+				// 	}));
+				res.redirect('/friends.html');
 
 				var toks = [access_token, refresh_token];
 				
