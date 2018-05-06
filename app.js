@@ -40,6 +40,30 @@ function postLogin(req, res) {
 	}));
 }
 
+app.get('/friendlogin', friendLogin);
+
+function friendLogin(req, res) {
+	console.log("friendLogin");
+	var state = generateRandomString(16);
+	res.cookie(stateKey, state);
+
+	var scope = 'user-library-read playlist-modify-public';
+
+	res.redirect('https://accounts.spotify.com/authorize?' +
+	querystring.stringify({
+		response_type: 'code',
+		client_id: client_id,
+		scope: scope,
+		redirect_uri: 'http://localhost:8889/finish/',
+		state: state,
+		show_dialog: true
+	}));
+}
+
+app.get('/finish', (req, res) => {
+	console.log("miles");
+});
+
 app.post('/friend',secondCallback)
 
 var friendname;
@@ -50,6 +74,7 @@ function secondCallback(req, res) {
 	console.log("secondCallback");
 
 	friendname = req.body.username;
+	var friendpass = req.body.password;
 
 	tokensreceived
 	.then(getFriendData)
@@ -330,6 +355,7 @@ function playlistObjectRequest(token, params, username) {
 }
 
 function getUniqueIds(inObj) {
+	console.log("getUniqueIds");
 	var arr = inObj.data;
 
 	var mydataset = new Set();
