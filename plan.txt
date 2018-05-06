@@ -1,9 +1,21 @@
-get initial access and refresh token
+so whats the new plan
 
-get total saved tracks
-- loop until we get all track objects
-get total playlist number
-- loop until we get all playlist objects
----- loop until we get all track objects
+well we do it for the other
 
-once  3-7 are done, get ids from track objects
+so at the end of maincallback, we unhide a text field for the other persons username
+and when they click a check button or something, it changes the href
+-> that makes a get request to our server
+-> so we can do the functions on the other user
+-> but then we need some good way of combining the two sets of data without global variables?
+
+when the function is called inside the await function, we want nothing to happen
+but we can have the function be called by the get request, and use the invocation context to determine whether it was the get request that called it or the other function. Then, if the function was called by the get request, it will return
+
+that was pretty lit
+idk how async await works tho
+
+we could call the function from main callback, and have it return when func2 resolves
+
+func2 would be called by the get request and then resolved using the invocation context as well
+
+so lets make the text field and href and the button and then try the func2 thing before doing all the playlist s

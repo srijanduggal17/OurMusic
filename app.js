@@ -11,6 +11,7 @@ var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
 var rp = require('request-promise');
 
 var stateKey = 'spotify_auth_state';
@@ -24,12 +25,12 @@ var redirect_uri = 'http://localhost:8889/callback/'; // Your redirect uri
 var trackobjectsarr = [];
 var mysongsarr = [];
 var myplaylistobjarr = [];
+var tokensreceived;
 
 app.use(express.static(__dirname + '/public'))
-	.use(cookieParser());
+	.use(cookieParser())
+	.use(bodyParser.urlencoded({ extended: true }));
 
-//Application requests authorization
-////////////////Section 1 ////////////////////////////
 app.get('/login', postLogin);
 
 function postLogin(req, res) {
@@ -37,7 +38,7 @@ function postLogin(req, res) {
 	var state = generateRandomString(16);
 	res.cookie(stateKey, state);
 
-	var scope = 'user-library-read';
+	var scope = 'user-library-read playlist-modify-public';
 	res.redirect('https://accounts.spotify.com/authorize?' +
 	querystring.stringify({
 		response_type: 'code',
@@ -48,11 +49,328 @@ function postLogin(req, res) {
 	}));
 }
 
+app.post('/friend',secondCallback)
+
+var friendname;
+var mysongscomplete;
+var friendsongscomplete;
+
+function secondCallback(req, res) {
+	console.log("secondCallback");
+
+	friendname = req.body.username;
+
+	tokensreceived
+	.then(getFriendData)
+	.then(getFriendUniqueIds)
+	.then(inObj => {
+		friendsongscomplete = Promise.resolve(inObj);
+	})
+	.then(getCommonIds)
+	// .then(arr => {
+	// 	console.log("combos");
+	// 	console.log(arr);
+	// 	console.log(arr.size);
+	// 	res.redirect("postcreation.html");
+
+	// 	return arr;
+	// })
+	.then(createPlaylist);
+}
+
+function createPlaylist(inObj) {
+	var data = inObj.data;
+	var playlistname = "me and " + friendname;
+	makeEndpoint(playlistname, inObj.token, data)
+	.then(addSongs)
+	.then(blah => {
+		console.log("everything done");
+	});
+}
+
+function addSongs(inObj) {
+	console.log("addSongs");
+
+	var data = inObj.data;
+	var playlistid = inObj.id;
+	var token = inObj.token;
+
+	var totalsongs = data.size;
+
+	data = cleanup(data);
+
+	var promiseArr = [];
+
+	var prevoffset = -100;
+	var numtimes = Math.ceil(totalsongs/100);
+
+	for (let i = 0; i < numtimes; i++) {
+		let startind = i*100;
+		let endind = i*100 + 100;
+
+		let currentarr = data.slice(startind, endind);
+
+		currentprom = new Promise((resolve, reject) => {
+			postTracks(token, currentarr, playlistid)
+			.then(arr => {
+				resolve("resolved");
+			})
+			.catch(error => {
+				console.error("Error in loop of addSongs");
+				reject(error);
+			});
+		});
+
+		promiseArr.push(currentprom);
+	}
+
+	return new Promise((resolve, reject) => {
+		Promise.all(promiseArr)
+			.then(() => {
+				resolve("All done");
+			})
+			.catch(error => {
+				console.error("Error in addSongs");
+				reject(error);
+			});
+	});
+}
+
+function postTracks(token, tracks, playlistid) {
+	console.log("postTracks");
+	var options = {
+		method: 'POST',
+		form: JSON.stringify({uris: tracks}),
+		url: 'https://api.spotify.com/v1/users/srijanduggal17/playlists/' + playlistid + '/tracks',
+		headers: {
+			'Authorization': 'Bearer ' + token,
+			'Content-Type' : 'application/json'
+		},
+		json: true
+	};
+
+	return new Promise ((resolve, reject) => {
+		rp(options)
+			.then(body => {
+				resolve("success");
+			})
+			.catch(error => {
+				console.error("Error in postTracks");
+				reject(error);
+			});
+	});
+}
+
+function makeEndpoint(name, token, data) {
+	console.log("makeEndpoint");
+	var options = {
+		method: 'POST',
+		form: JSON.stringify({name: name}),
+		url: 'https://api.spotify.com/v1/users/srijanduggal17/playlists',
+		headers: {
+			'Authorization': 'Bearer ' + token,
+			'Content-Type' : 'application/json'
+		},
+		json: true
+	};
+
+	return new Promise ((resolve, reject) => {
+		rp(options)
+			.then(body => {
+				var outObj = {
+					token: token,
+					id: body.id,
+					data: data
+				};
+				resolve(outObj);
+			})
+			.catch(error => {
+				console.error("Error in makeEndpoint");
+				reject(error);
+			});
+	});
+}
+
+function cleanup(data) {
+	var arr = [...data];
+	var newarr = arr.map(x => 'spotify:track:' + x);
+	return newarr;
+}
+
+function getCommonIds() {
+	return new Promise((resolve, reject) => {
+		var commonarr;
+
+		Promise.all([mysongscomplete, friendsongscomplete])
+		.then(sets => {
+			commonarr = new Set([...sets[0]].filter(id => sets[1].data.has(id)));
+
+			var outObj = {
+				data: commonarr,
+				token: sets[1].token
+			}
+			resolve(outObj);
+		})
+		.catch(error => {
+			console.error("Error in getCommonIds")
+			reject(error);
+		})
+	})
+}
+
+function getFriendData(toks) {
+	console.log("getFriendData");
+	return new Promise((resolve, reject) => {
+		getFriendTotalPlaylists(toks[0], friendname)
+		.then(getFriendPlaylistObjects)
+		.then(getTotalPlaylistTrackObjects)
+		.then(arr => {
+			var outObj = {
+				data: arr,
+				token: toks[0]
+			}
+			resolve(outObj);
+		})
+		.catch(error => {
+			console.error("Error in playlistTracks");
+			reject(error);
+		});
+	})
+}
+
+function getFriendTotalPlaylists(token, username) {
+	console.log("getFriendTotalPlaylists");
+	var options = {
+		method: 'GET',
+		url: 'https://api.spotify.com/v1/users/' + username + '/playlists?',
+		headers: { 'Authorization': 'Bearer ' + token },
+		json: true
+	};
+
+	return new Promise ((resolve, reject) => {
+		rp(options)
+		.then(body => {
+			console.log('Total friend playlists received');
+			var outObj = {
+				totalplaylists: body.total,
+				username: username,
+				token: token
+			}
+			resolve(outObj);
+		})
+		.catch(error => {
+			console.error("Error in getFriendTotalPlaylists");
+			reject(error);
+		});
+	});
+}
+
+function getFriendPlaylistObjects(inObj) {
+	console.log("getFriendPlaylistObjects");
+	var totalplaylists = inObj.totalplaylists;
+	var token = inObj.token;
+	var username = inObj.username;
+
+	var objArray = [];
+	var promiseArr = [];
+
+	var prevoffset = -50;
+	var numtimes = Math.ceil(totalplaylists/50);
+
+	for (let i = 0; i < numtimes; i++) {
+		let paramobj = {
+			limit: 50,
+			offset: prevoffset + 50
+		}; 
+		let params = querystring.stringify(paramobj);
+		prevoffset = paramobj.offset;
+
+		currentprom = new Promise((resolve, reject) => {
+			friendPlaylistObjectRequest(token, params, username)
+			.then(arr => {
+				var playlistArr = [];
+				for (let j = 0; j < arr.length; j++) {
+					playlistArr.push(arr[j].tracks);
+				}
+				objArray.push(...playlistArr);
+				resolve("resolved");
+			})
+			.catch(error => {
+				console.error("Error in loop of getFriendPlaylistObjects");
+				reject(error);
+			});
+		});
+
+		promiseArr.push(currentprom);
+	}
+
+	return new Promise((resolve, reject) => {
+		Promise.all(promiseArr)
+			.then(() => {
+				let outObj = {
+					token: token,
+					data: objArray
+				}
+				resolve(outObj);
+			})
+			.catch(error => {
+				console.error("Error in getFriendPlaylistObjects");
+				reject(error);
+			});
+	});
+}
+
+function friendPlaylistObjectRequest(token, params, username) {
+	console.log("friendPlaylistObjectRequest");
+	var options = {
+		method: 'GET',
+		url: 'https://api.spotify.com/v1/users/' + username +'/playlists?' + params + '',
+		headers: { 'Authorization': 'Bearer ' + token },
+		json: true
+	};
+
+	return new Promise ((resolve, reject) => {
+		rp(options)
+			.then(body => {
+				var resultarr = body.items;
+				resolve(resultarr);
+			})
+			.catch(error => {
+				console.error("Error in playlistObjectRequest");
+				reject(error);
+			});
+	});
+}
+
+function getFriendUniqueIds(inObj) {
+	var arr = inObj.data;
+
+	var mydataset = new Set();
+	for (let i = 0; i < arr.length; i++) {
+		mydataset.add(arr[i].id);
+	}
+
+	var outObj = {
+		data: mydataset,
+		token: inObj.token
+	}
+	return outObj;
+}
+
 app.get('/callback', mainCallback);
+
 
 function mainCallback(req, res) {
 	console.log("mainCallback");
-	getInitialTokens(req, res)
+
+	var tokenrequest = getInitialTokens(req, res);
+
+	tokenrequest
+	.then(toks => {
+		tokensreceived = Promise.resolve(toks);
+	});
+
+	tokenrequest
 	.then(getMyData)
 	.then(combineArrays)
 	.then(getUniqueIds)
@@ -60,9 +378,12 @@ function mainCallback(req, res) {
 		console.log("done");
 		console.log(arr);
 		console.log(arr.size);
+
+		mysongscomplete = Promise.resolve(arr);
 	})
-	.catch(err => {
-		console.log(err);
+	.catch(error => {
+		console.error("Error somewhere in main callback");
+		console.log(error);
 	});
 }
 
@@ -73,14 +394,13 @@ function getInitialTokens(req, res) {
 	var storedState = req.cookies ? req.cookies[stateKey] : null;
 
 	if (state === null || state !== storedState) {
+		throw new Error("state does not match storedState");
 		res.redirect('/#' +
 			querystring.stringify({
 				error: 'state_mismatch'
 			}));
 	} else {
 		res.clearCookie(stateKey);
-		//Request access and refresh tokens
-		///////////////////Section 2//////////////////////////////
 		let authOptions = {
 			method: 'POST',
 			url: 'https://accounts.spotify.com/api/token',
@@ -109,19 +429,18 @@ function getInitialTokens(req, res) {
 					}));
 
 				var toks = [access_token, refresh_token];
-
+				
 				resolve(toks);
 			})
 			.catch(error => {
 				console.error("Error obtaining access token from refresh token");
-				console.log(error);
 
 				res.redirect('/#' +
 					querystring.stringify({
 						error: 'invalid_token'
 					}));
-				reject("Access token not obtained");
-			});	
+				reject(error);
+			});
 		});
 	}
 }
@@ -137,6 +456,10 @@ function getMyData (toks) {
 			console.log("yay we done");
 			resolve(results);
 		})
+		.catch(error => {
+			console.error("Error in getMyData");
+			resolve(error);
+		})
 	});
 }
 
@@ -147,6 +470,10 @@ function savedTracks(token) {
 		.then(getSavedTrackObjects)
 		.then(arr => {
 			resolve(arr);
+		})
+		.catch(error => {
+			console.error("Error in savedTracks");
+			reject(error);
 		})
 	})
 }
@@ -170,8 +497,9 @@ function getTotalSavedTracks(token) {
 			}
 			resolve(outObj);
 		})
-		.catch(err => {
-			reject('Error getting total saved tracks');
+		.catch(error => {
+			console.error("Error in getTotalSavedTracks");
+			reject(error);
 		});
 	});
 }
@@ -201,6 +529,10 @@ function getSavedTrackObjects(inObj) {
 			.then(arr => {
 				objArray.push(...arr);
 				resolve("resolved");
+			})
+			.catch(error => {
+				console.error("Error in loop of getSavedTrackObjects");
+				reject(error);
 			});
 		});
 
@@ -213,8 +545,8 @@ function getSavedTrackObjects(inObj) {
 				resolve(objArray);
 			})
 			.catch(error => {
-				console.error("error");
-				reject("sorry");
+				console.error("Error in getSavedTrackObjects");
+				reject(error);
 			});
 	});
 }
@@ -239,9 +571,8 @@ function trackObjectRequest(token, params) {
 				resolve(newarr);
 			})
 			.catch(error => {
-				console.error("Error");
-				console.log(error);
-				reject("sorry");
+				console.error("Error in trackObjectRequest");
+				reject(error);
 			});
 	});
 }
@@ -253,11 +584,16 @@ function playlistTracks(token) {
 		.then(getTotalPlaylistTrackObjects)
 		.then(arr => {
 			resolve(arr);
+		})
+		.catch(error => {
+			console.error("Error in playlistTracks");
+			reject(error);
 		});
 	})
 }
 
 function getTotalPlaylists(token) {
+	console.log("getTotalPlaylists");
 	var options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/playlists?',
@@ -275,8 +611,9 @@ function getTotalPlaylists(token) {
 			}
 			resolve(outObj);
 		})
-		.catch(err => {
-			reject('Error getting total saved tracks');
+		.catch(error => {
+			console.error("Error in getTotalPlaylists");
+			reject(error);
 		});
 	});
 }
@@ -309,6 +646,10 @@ function getPlaylistObjects(inObj) {
 				}
 				objArray.push(...playlistArr);
 				resolve("resolved");
+			})
+			.catch(error => {
+				console.error("Error in loop of getPlaylistObjects");
+				reject(error);
 			});
 		});
 
@@ -325,8 +666,8 @@ function getPlaylistObjects(inObj) {
 				resolve(outObj);
 			})
 			.catch(error => {
-				console.error("error");
-				reject("sorry");
+				console.error("Error in getPlaylistObjects");
+				reject(error);
 			});
 	});
 }
@@ -347,9 +688,8 @@ function playlistObjectRequest(token, params) {
 				resolve(resultarr);
 			})
 			.catch(error => {
-				console.error("Error");
-				console.log(error);
-				reject("sorry");
+				console.error("Error in playlistObjectRequest");
+				reject(error);
 			});
 	});
 }
@@ -374,6 +714,10 @@ function getTotalPlaylistTrackObjects(inObj) {
 			.then(arr => {
 				objArray.push(...arr);
 				resolve("resolved");
+			})
+			.catch(error => {
+				console.error("Error in loop of getTotalPlaylistTrackObjects");
+				reject(error);
 			});
 		});
 
@@ -384,6 +728,10 @@ function getTotalPlaylistTrackObjects(inObj) {
 		Promise.all(promiseArr)
 		.then(() => {
 			resolve(objArray);
+		})
+		.catch(error => {
+			console.error("Error in getTotalPlaylistTrackObjects");
+			reject(error);
 		})
 	});
 }
@@ -413,6 +761,10 @@ function getObjectsFromPlaylist(inObj) {
 			.then(arr => {
 				objArray.push(...arr);
 				resolve("resolved");
+			})
+			.catch(error => {
+				console.error("Error in loop of getObjectsFromPlaylist");
+				reject(error);
 			});
 		});
 
@@ -425,8 +777,8 @@ function getObjectsFromPlaylist(inObj) {
 				resolve(objArray);
 			})
 			.catch(error => {
-				console.error("error");
-				reject("sorry");
+				console.error("Error in getObjectsFromPlaylist");
+				reject(error);
 			});
 	});
 }
@@ -451,9 +803,8 @@ function playlistTrackObjectRequest(token, params, href) {
 				resolve(newarr);
 			})
 			.catch(error => {
-				console.error("Error");
-				console.log(error);
-				reject("sorry");
+				console.error("Error in playlistObjectRequest");
+				reject(error);
 			});
 	});
 }
