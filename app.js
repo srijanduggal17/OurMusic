@@ -36,7 +36,8 @@ function postLogin(req, res) {
 		client_id: client_id,
 		scope: scope,
 		redirect_uri: redirect_uri,
-		state: state
+		state: state,
+		show_dialog: true
 	}));
 }
 
@@ -60,11 +61,34 @@ function friendLogin(req, res) {
 	}));
 }
 
-app.get('/finish', (req, res) => {
-	console.log("miles");
-});
+app.get('/finish', friendMainCallback);
 
-app.post('/friend',secondCallback)
+function friendMainCallback (req, res) {
+	console.log("friendMainCallback");
+
+	getFriendInitialTokens(req, res)
+	.then(getMyData)
+	.then(combineArrays)
+	.then(getUniqueIds)
+	.then(obj => {
+		console.log("done");
+		console.log(obj.data);
+		console.log(obj.data.size);
+
+		friendsongscomplete = Promise.resolve(obj);
+	})
+	.then(getFullCommonIds)
+	.then(createPlaylist)
+	.then(() => {
+		res.redirect("postcreation.html");
+	})
+	.catch(error => {
+		console.error("Error somewhere in main callback");
+		console.log(error);
+	});
+}
+
+app.post('/friend', secondCallback)
 
 var friendname;
 var mysongscomplete;
@@ -74,7 +98,6 @@ function secondCallback(req, res) {
 	console.log("secondCallback");
 
 	friendname = req.body.username;
-	var friendpass = req.body.password;
 
 	tokensreceived
 	.then(getFriendData)
@@ -208,13 +231,35 @@ function cleanup(data) {
 	return newarr;
 }
 
+function getFullCommonIds() {
+	return new Promise((resolve, reject) => {
+		var commonarr;
+
+		Promise.all([mysongscomplete, friendsongscomplete])
+		.then(sets => {
+			commonarr = new Set([...sets[0].data].filter(id => sets[1].data.has(id)));
+
+			var outObj = {
+				data: commonarr,
+				token: sets[0].token
+			}
+			console.log(sets[0].token);
+			resolve(outObj);
+		})
+		.catch(error => {
+			console.error("Error in getCommonIds")
+			reject(error);
+		})
+	})
+}
+
 function getCommonIds() {
 	return new Promise((resolve, reject) => {
 		var commonarr;
 
 		Promise.all([mysongscomplete, friendsongscomplete])
 		.then(sets => {
-			commonarr = new Set([...sets[0]].filter(id => sets[1].data.has(id)));
+			commonarr = new Set([...sets[0].data].filter(id => sets[1].data.has(id)));
 
 			var outObj = {
 				data: commonarr,
@@ -391,7 +436,7 @@ function mainCallback(req, res) {
 		console.log(obj.data);
 		console.log(obj.data.size);
 
-		mysongscomplete = Promise.resolve(obj.data);
+		mysongscomplete = Promise.resolve(obj);
 	})
 	.catch(error => {
 		console.error("Error somewhere in main callback");
@@ -466,7 +511,11 @@ function getMyData (toks) {
 		Promise.all([savedtrackspromise, playlisttrackspromise])
 		.then(results => {
 			console.log("yay we done");
-			resolve(results);
+			var outObj = {
+				data: results,
+				token: toks[0]
+			}
+			resolve(outObj);
 		})
 		.catch(error => {
 			console.error("Error in getMyData");
@@ -720,12 +769,64 @@ function playlistTrackObjectRequest(token, params, href) {
 }
 
 function combineArrays(arr) {
-	var newarr = arr[0];
-	newarr.push(...arr[1]);
+	var newarr = arr.data[0];
+	newarr.push(...arr.data[1]);
 	var outObj = {
-		data: newarr
-	}
+		data: newarr,
+		token: arr.token
+	};
 	return outObj;
+}
+
+function getFriendInitialTokens(req, res) {
+	console.log("getFriendInitialTokens");
+	code = req.query.code || null;
+	var state = req.query.state || null;
+	var storedState = req.cookies ? req.cookies[stateKey] : null;
+
+	if (state === null || state !== storedState) {
+		throw new Error("state does not match storedState");
+		res.redirect('/#' +
+			querystring.stringify({
+				error: 'state_mismatch'
+			}));
+	} else {
+		res.clearCookie(stateKey);
+		let authOptions = {
+			method: 'POST',
+			url: 'https://accounts.spotify.com/api/token',
+			form: {
+				code: code,
+				redirect_uri: 'http://localhost:8889/finish/',
+				grant_type: 'authorization_code'
+			},
+			headers: {
+				'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
+			},
+			json: true
+		};
+
+		return new Promise ((resolve, reject) => {
+			rp(authOptions)
+			.then(body => {
+				var access_token = body.access_token,
+				refresh_token = body.refresh_token;
+
+				var toks = [access_token, refresh_token];
+				
+				resolve(toks);
+			})
+			.catch(error => {
+				console.error("Error obtaining access token from refresh token");
+
+				res.redirect('/#' +
+					querystring.stringify({
+						error: 'invalid_token'
+					}));
+				reject(error);
+			});
+		});
+	}
 }
 
 app.get('/refresh_token', function(req, res) {
