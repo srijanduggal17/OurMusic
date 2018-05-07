@@ -2,14 +2,17 @@
 <html>
 <head>
 	<title>OurMusic</title>
-	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 </head>
 
 <body>
 	<div class="container">
 		<div id="login">
-			<h1>This is an example of the Authorization Code flow</h1>
-			<a id="loginbutton" href="/login" class="btn btn-primary">Log in with Spotify</a>
+			<h3>Enter a playlist name below</h3>
+			<form method="post" action="/playlistname">
+			    <input type="text" name="playname">
+			    <input id="submitbutton" type="submit">
+			</form>
+			<a id="loginbutton" href="/login">Log in with Spotify</a>
 		</div>
 	</div>
 

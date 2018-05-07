@@ -24,12 +24,20 @@ app.use(express.static(__dirname + '/public'))
 
 app.get('/login', postLogin);
 
+var playname;
+
+app.post('/playlistname', getPlaylistName)
+
+function getPlaylistName(req, res) {
+	playname = req.body.playname;
+}
+
 function postLogin(req, res) {
 	console.log("postLogin");
 	var state = generateRandomString(16);
 	res.cookie(stateKey, state);
 
-	var scope = 'user-library-read playlist-modify-public';
+	var scope = 'user-library-read playlist-modify-public playlist-modify-private';
 	res.redirect('https://accounts.spotify.com/authorize?' +
 	querystring.stringify({
 		response_type: 'code',
@@ -48,7 +56,7 @@ function friendLogin(req, res) {
 	var state = generateRandomString(16);
 	res.cookie(stateKey, state);
 
-	var scope = 'user-library-read playlist-modify-public';
+	var scope = 'user-library-read playlist-modify-public playlist-modify-private';
 
 	res.redirect('https://accounts.spotify.com/authorize?' +
 	querystring.stringify({
@@ -78,7 +86,7 @@ function friendMainCallback (req, res) {
 		friendsongscomplete = Promise.resolve(obj);
 	})
 	.then(getFullCommonIds)
-	.then(createPlaylist)
+	.then(createPlaylists)
 	.then(() => {
 		res.redirect("postcreation.html");
 	})
@@ -106,28 +114,130 @@ function secondCallback(req, res) {
 		friendsongscomplete = Promise.resolve(inObj);
 	})
 	.then(getCommonIds)
-	.then(createPlaylist)
+	.then(createMyPlaylist)
 	.then(() => {
 		res.redirect("postcreation.html");
 	});
 }
 
-function createPlaylist(inObj) {
-	var data = inObj.data;
-	var playlistname = "me and " + friendname;
-	makeEndpoint(playlistname, inObj.token, data)
-	.then(addSongs)
-	.then(blah => {
-		console.log("everything done");
+function createPlaylists(inObj) {
+	createOurPlaylist(inObj)
+	.then(followPlaylist);
+	// createFriendPlaylist(inObj);
+}
+
+function followPlaylist(inObj) {
+	console.log("followPlaylist");
+	var ownerid = inObj.ownerid;
+	var playlistid = inObj.playlistid;
+	var token = inObj.friendtoken;
+
+	var options = {
+		method: 'PUT',
+		url: 'https://api.spotify.com/v1/users/' + ownerid + '/playlists/' + playlistid + '/followers',
+		headers: {
+			'Authorization': 'Bearer ' + token,
+			'Content-Type' : 'application/json'
+		},
+		json: true
+	};
+
+	return new Promise ((resolve, reject) => {
+		rp(options)
+			.then(body => {
+				resolve("success");
+			})
+			.catch(error => {
+				console.error("Error in postTracks");
+				reject(error);
+			});
 	});
 }
 
-function makeEndpoint(name, token, data) {
+function createMyPlaylist(inObj) {
+	getMyId(inObj.mytoken)
+	.then(id => {
+		var data = inObj.data;
+		var playlistname = playname || ("me and " + friendname);
+		makeEndpoint(playlistname, id, inObj.mytoken, data, false)
+		.then(addSongs)
+		.then(blah => {
+			console.log("everything done");
+		});
+	});
+}
+
+function createOurPlaylist(inObj) {
+	return new Promise ((resolve, reject) => {
+		getMyId(inObj.mytoken)
+		.then(id => {
+			var data = inObj.data;
+			var playlistname = playname || ("me and " + friendname);
+			makeEndpoint(playlistname, id, inObj.mytoken, data, true)
+			.then(addSongs)
+			.then(playid => {
+				var outObj = {
+					friendtoken: inObj.friendtoken,
+					ownerid: id,
+					playlistid: playid
+				}
+				console.log("ourPlaylist created");
+				resolve(outObj);
+			});
+		});
+	});
+}
+
+function getMyId(token) {
+	var options = {
+		method: 'GET',
+		url: 'https://api.spotify.com/v1/me',
+		headers: {
+			'Authorization': 'Bearer ' + token
+		},
+		json: true
+	};
+
+	return new Promise ((resolve, reject) => {
+		rp(options)
+			.then(body => {
+				resolve(body.id);
+			})
+			.catch(error => {
+				console.error("Error in makeEndpoint");
+				reject(error);
+			});
+	});
+}
+
+function createFriendPlaylist(inObj) {
+	getMyId(inObj.friendtoken)
+	.then(id => {
+		var data = inObj.data;
+		var playlistname = playname || ("me and " + friendname);
+		makeEndpoint(playlistname, id, inObj.friendtoken, data, false)
+		.then(addSongs)
+		.then(blah => {
+			console.log("everything done");
+		});
+	});
+}
+
+function makeEndpoint(name, username, token, data, collab) {
 	console.log("makeEndpoint");
+
+	var reqbod = {
+		name: name,
+	}
+	if (collab) {
+		reqbod.public = false;
+		reqbod.collaborative = true;
+	}
+
 	var options = {
 		method: 'POST',
-		form: JSON.stringify({name: name}),
-		url: 'https://api.spotify.com/v1/users/srijanduggal17/playlists',
+		form: JSON.stringify(reqbod),
+		url: 'https://api.spotify.com/v1/users/' + username + '/playlists',
 		headers: {
 			'Authorization': 'Bearer ' + token,
 			'Content-Type' : 'application/json'
@@ -141,7 +251,8 @@ function makeEndpoint(name, token, data) {
 				var outObj = {
 					token: token,
 					id: body.id,
-					data: data
+					data: data,
+					userid: username
 				};
 				resolve(outObj);
 			})
@@ -158,6 +269,7 @@ function addSongs(inObj) {
 	var data = inObj.data;
 	var playlistid = inObj.id;
 	var token = inObj.token;
+	var userid = inObj.userid;
 
 	var totalsongs = data.size;
 
@@ -175,7 +287,7 @@ function addSongs(inObj) {
 		let currentarr = data.slice(startind, endind);
 
 		currentprom = new Promise((resolve, reject) => {
-			postTracks(token, currentarr, playlistid)
+			postTracks(token, userid, currentarr, playlistid)
 			.then(arr => {
 				resolve("resolved");
 			})
@@ -191,7 +303,7 @@ function addSongs(inObj) {
 	return new Promise((resolve, reject) => {
 		Promise.all(promiseArr)
 			.then(() => {
-				resolve("All done");
+				resolve(playlistid);
 			})
 			.catch(error => {
 				console.error("Error in addSongs");
@@ -200,12 +312,12 @@ function addSongs(inObj) {
 	});
 }
 
-function postTracks(token, tracks, playlistid) {
+function postTracks(token, userid, tracks, playlistid) {
 	console.log("postTracks");
 	var options = {
 		method: 'POST',
 		form: JSON.stringify({uris: tracks}),
-		url: 'https://api.spotify.com/v1/users/srijanduggal17/playlists/' + playlistid + '/tracks',
+		url: 'https://api.spotify.com/v1/users/' + userid + '/playlists/' + playlistid + '/tracks',
 		headers: {
 			'Authorization': 'Bearer ' + token,
 			'Content-Type' : 'application/json'
@@ -241,7 +353,8 @@ function getFullCommonIds() {
 
 			var outObj = {
 				data: commonarr,
-				token: sets[0].token
+				mytoken: sets[0].token,
+				friendtoken: sets[1].token
 			}
 			console.log(sets[0].token);
 			resolve(outObj);
@@ -263,7 +376,7 @@ function getCommonIds() {
 
 			var outObj = {
 				data: commonarr,
-				token: sets[1].token
+				mytoken: sets[1].token
 			}
 			resolve(outObj);
 		})
