@@ -12,10 +12,6 @@ var client_id = '15ec5ccbf8d648378ecefdf8bab3f58d'; // Your client id
 var client_secret = 'a40cc81bc12a4ea0adcb04a8638bd1f2'; // Your secret
 var redirect_uri = 'http://localhost:8889/callback/'; // Your redirect uri
 
-var trackobjectsarr = [];
-var mysongsarr = [];
-var myplaylistobjarr = [];
-
 var firebase = require("firebase");
 var config = {
 	apiKey: "AIzaSyCz4s7QchGpEoqEbXsHCrlZYcnkIcdFD08",
@@ -98,11 +94,10 @@ function friendMainCallback (req, res) {
 		console.log(obj.data);
 		console.log(obj.data.size);
 
-		friendsongscomplete = obj;
-
 		var outObj = {
 			playlistname: playlistname,
-			databaseref: databaseref
+			databaseref: databaseref,
+			friend: obj
 		};
 		return outObj;
 	})
@@ -119,8 +114,6 @@ function friendMainCallback (req, res) {
 
 app.post('/friendpublic', secondCallback)
 
-var friendsongscomplete;
-
 function secondCallback(req, res) {
 	console.log("secondCallback");
 
@@ -136,12 +129,11 @@ function secondCallback(req, res) {
 			getFriendData(toks, friendname)
 			.then(getUniqueIds)
 			.then(inObj => {
-				friendsongscomplete = inObj;
-
 				var outObj = {
 					friendname: friendname,
 					playname: playname,
-					databaseref: databaseref
+					databaseref: databaseref,
+					friend: inObj
 				}
 
 				return outObj;
@@ -377,12 +369,12 @@ function getFullCommonIds(inObj) {
 
 			console.log(mydata);
 
-			commonarr = new Set(mydata.filter(id => friendsongscomplete.data.has(id)));
+			commonarr = new Set(mydata.filter(id => inObj.friend.data.has(id)));
 
 			var outObj = {
 				data: commonarr,
 				mytoken: myref.tokens[0],
-				friendtoken: friendsongscomplete.token,
+				friendtoken: inObj.friend.token,
 				playlistname: inObj.playlistname
 			}
 			resolve(outObj);
@@ -402,7 +394,7 @@ function getCommonIds(inObj) {
 			var myref = snapshot.val();
 			var mydata = myref.mysongdata;
 
-			commonarr = new Set(mydata.filter(id => friendsongscomplete.data.has(id)));
+			commonarr = new Set(mydata.filter(id => inObj.friend.data.has(id)));
 
 			var outObj = {
 				data: commonarr,
