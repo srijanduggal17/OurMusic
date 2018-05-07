@@ -88,7 +88,7 @@ function friendMainCallback (req, res) {
 	});
 }
 
-app.post('/friend', secondCallback)
+app.post('/friendpublic', secondCallback)
 
 var friendname;
 var mysongscomplete;

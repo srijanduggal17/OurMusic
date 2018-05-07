@@ -4,16 +4,22 @@
 	<title>OurMusic</title>
 </head>
 <body>
-<!-- 	<div id="frienddiv">
-		<h1>Type your friend's username below</h1>
-		<form method="post" action="/friend">
-		    <input type="text" name="username">
-		    <input type="submit">
-		</form>
-	</div> -->
+	<div id="maindiv">
+		<h1>Connect to your friend's account</h1>
+		<div id="frienddiv">
+			<h3>Access their public tracks</h3>
+			<form method="post" action="/friendpublic">
+			    <input type="text" name="username">
+			    <input id="submitbutton" type="submit">
+			</form>
+		</div>
+		<p>OR</p>
 		<div id="login">
-			<h1>Friend login</h1>
-			<a id="loginbutton" href="/friendlogin" class="btn btn-primary">Log in with Spotify</a>
-		</div
+			<h3>Log them in to access all their songs</h3>
+			<a id="loginbutton" href="/friendlogin">Log in with Spotify</a>
+		</div>
+	</div>
+	<p id="loading">Loading</p>
+	<script type="text/javascript" src="index.js"></script>
 </body>
 </html>
