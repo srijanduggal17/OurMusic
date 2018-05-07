@@ -49,9 +49,11 @@ function postLogin(req, res) {
 	}));
 }
 
-app.get('/friendlogin', friendLogin);
+app.post('/friendlogin', friendLogin);
 
 function friendLogin(req, res) {
+	playname = req.body.playname;
+	console.log(playname);
 	console.log("friendLogin");
 	var state = generateRandomString(16);
 	res.cookie(stateKey, state);
@@ -106,6 +108,8 @@ function secondCallback(req, res) {
 	console.log("secondCallback");
 
 	friendname = req.body.username;
+	playname = req.body.playname;
+	console.log(playname);
 
 	tokensreceived
 	.then(getFriendData)
@@ -123,7 +127,6 @@ function secondCallback(req, res) {
 function createPlaylists(inObj) {
 	createOurPlaylist(inObj)
 	.then(followPlaylist);
-	// createFriendPlaylist(inObj);
 }
 
 function followPlaylist(inObj) {
@@ -207,19 +210,6 @@ function getMyId(token) {
 				console.error("Error in makeEndpoint");
 				reject(error);
 			});
-	});
-}
-
-function createFriendPlaylist(inObj) {
-	getMyId(inObj.friendtoken)
-	.then(id => {
-		var data = inObj.data;
-		var playlistname = playname || ("me and " + friendname);
-		makeEndpoint(playlistname, id, inObj.friendtoken, data, false)
-		.then(addSongs)
-		.then(blah => {
-			console.log("everything done");
-		});
 	});
 }
 
@@ -969,36 +959,6 @@ app.get('/refresh_token', function(req, res) {
 app.listen(8889, () => {
 	console.log('Listening on 8889');
 });
-
-function getAccTok(reftok) {
-	var acctok;
-
-	let info = {
-		method: 'POST',
-		url: 'https://accounts.spotify.com/api/token',
-		form: {
-			grant_type : 'refresh_token',
-			refresh_token: reftok
-		},
-		headers: {
-			'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
-		},
-		json: true
-	};
-
-	return new Promise ((resolve, reject) => {
-		rp(info)
-		.then(body => {
-			acctok = body.access_token;
-			resolve(acctok);
-		})
-		.catch(error => {
-			console.error("Error obtaining access token from refresh token");
-			console.log(error);
-			reject("Access token not obtained");
-		});	
-	});
-}
 
 /**
  * Generates a random string containing numbers and letters

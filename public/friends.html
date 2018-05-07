@@ -5,21 +5,26 @@
 </head>
 <body>
 	<div id="maindiv">
-		<h1>Connect to your friend's account</h1>
+		<h1>Enter a playlist name below</h1>
+	    <input id="playnameinput" name="playname" type="text">
+		<h2>Connect to your friend's account</h2>
 		<div id="frienddiv">
 			<h3>Access their public tracks</h3>
-			<form method="post" action="/friendpublic">
-			    <input type="text" name="username">
+			<form id="friendpublicform" method="post" action="/friendpublic" onsubmit="return submitFunc('public')">
+			    <input id="username" type="text" name="username">
 			    <input id="submitbutton" type="submit">
 			</form>
 		</div>
 		<p>OR</p>
 		<div id="login">
 			<h3>Log them in to access all their songs</h3>
-			<a id="loginbutton" href="/friendlogin">Log in with Spotify</a>
+			<form id="friendloginform" method="post" action="/friendlogin" onsubmit="return submitFunc('login')">
+				<input type="submit" value="Log in with Spotify">
+			</form>
+			<!-- <a id="loginbutton" href="/friendlogin">Log in with Spotify</a> -->
 		</div>
 	</div>
 	<p id="loading">Loading</p>
-	<script type="text/javascript" src="index.js"></script>
+	<script type="text/javascript" src="friends.js"></script>
 </body>
 </html>
