@@ -1,5 +1,6 @@
 var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
+var path = require('path');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
@@ -155,7 +156,7 @@ function completionFunc(req, res) {
 	var databaseref = req.cookies[stateKey];
 	database.ref(databaseref).remove();
 	res.clearCookie(stateKey);
-	res.sendFile(__dirname + '/public/complete.html');
+	res.sendFile(path.join(__dirname + '/public/complete.html'));
 }
 
 function createPlaylists(inObj) {

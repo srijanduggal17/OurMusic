@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const path = require('path');
 
 var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
@@ -104,7 +105,7 @@ function friendMainCallback (req, res) {
 	.then(createPlaylists)
 	.then(() => {
 		res.cookie(stateKey, databaseref);
-		res.redirect("/postcreation.html");
+		res.redirect("/completion");
 	})
 	.catch(error => {
 		console.error("Error in friend main callback");
@@ -140,9 +141,19 @@ function secondCallback(req, res) {
 		.then(getCommonIds)
 		.then(createMyPlaylist)
 		.then(() => {
-			res.redirect("postcreation.html");
+			res.redirect("/completion");
 		});
 	});
+}
+
+app.get('/completion', completionFunc);
+
+function completionFunc(req, res) {
+	console.log("yello");
+	var databaseref = req.cookies[stateKey];
+	database.ref(databaseref).remove();
+	res.clearCookie(stateKey);
+	res.redirect('/complete.html');
 }
 
 function createPlaylists(inObj) {
