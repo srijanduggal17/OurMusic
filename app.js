@@ -104,7 +104,8 @@ function friendMainCallback (req, res) {
 	.then(getFullCommonIds)
 	.then(createPlaylists)
 	.then(() => {
-		res.redirect("postcreation.html");
+		res.cookie(stateKey, databaseref);
+		res.redirect("/completion");
 	})
 	.catch(error => {
 		console.error("Error somewhere in main callback");
@@ -122,7 +123,7 @@ function secondCallback(req, res) {
 	var databaseref = req.body.databaseref;
 
 	database.ref(databaseref + '/tokens')
-	.on('value', data => {
+	.once('value', data => {
 		var toks = data.val();
 
 		if (toks) {
@@ -141,11 +142,20 @@ function secondCallback(req, res) {
 			.then(getCommonIds)
 			.then(createMyPlaylist)
 			.then(() => {
-				res.clearCookie(stateKey);
-				res.redirect("postcreation.html");
+				res.redirect("/completion");
 			});
 		}
 	});
+}
+
+app.get('/completion', completionFunc);
+
+function completionFunc(req, res) {
+	console.log("yello");
+	var databaseref = req.cookies[stateKey];
+	database.ref(databaseref).remove();
+	res.clearCookie(stateKey);
+	res.sendFile(__dirname + '/public/complete.html');
 }
 
 function createPlaylists(inObj) {
@@ -363,7 +373,7 @@ function getFullCommonIds(inObj) {
 		var databaseref = inObj.databaseref;
 
 		database.ref(databaseref)
-		.on("value", snapshot => {
+		.once("value", snapshot => {
 			var myref = snapshot.val();
 			var mydata = myref.mysongdata;
 
@@ -390,7 +400,7 @@ function getCommonIds(inObj) {
 		console.log(databaseref);
 
 		database.ref(databaseref)
-		.on("value", snapshot => {
+		.once("value", snapshot => {
 			var myref = snapshot.val();
 			var mydata = myref.mysongdata;
 

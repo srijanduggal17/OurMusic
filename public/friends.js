@@ -36,8 +36,11 @@ function addPlaylistName(formtype) {
 }
 
 function addDatabaseCookie(formtype) {
-	var cookies = document.cookie.split('=');
-	var databaseref = cookies[1];
+	var cookiesarr = document.cookie.split(';');
+	cookiesarr = cookiesarr.filter(x => x.includes('__session='));
+	var databasecookie = cookiesarr[0].split("=");
+	var databaseref = databasecookie[1];
+
 	var newelem = document.createElement('input');
 	newelem.type = 'text';
 	newelem.name = 'databaseref';
