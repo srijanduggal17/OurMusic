@@ -1,36 +1,35 @@
 var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
+var path = require('path');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var rp = require('request-promise');
 
-var stateKey = 'spotify_auth_state';
+var stateKey = '__session';
 var app = express();
-var code;
 
 var client_id = ''; // Your client id
 var client_secret = ''; // Your secret
 var redirect_uri = 'http://localhost:8889/callback/'; // Your redirect uri
 
-var trackobjectsarr = [];
-var mysongsarr = [];
-var myplaylistobjarr = [];
-var tokensreceived;
+var firebase = require("firebase");
+var config = {
+	apiKey: "AIzaSyCz4s7QchGpEoqEbXsHCrlZYcnkIcdFD08",
+	authDomain: "our-music-on-spotify.firebaseapp.com",
+	databaseURL: "https://our-music-on-spotify.firebaseio.com",
+	projectId: "our-music-on-spotify",
+	storageBucket: "our-music-on-spotify.appspot.com",
+	messagingSenderId: "1134077370"
+};
+firebase.initializeApp(config);
+var database = firebase.database();
 
 app.use(express.static(__dirname + '/public'))
 	.use(cookieParser())
 	.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/login', postLogin);
-
-var playname;
-
-app.post('/playlistname', getPlaylistName)
-
-function getPlaylistName(req, res) {
-	playname = req.body.playname;
-}
 
 function postLogin(req, res) {
 	console.log("postLogin");
@@ -52,11 +51,17 @@ function postLogin(req, res) {
 app.post('/friendlogin', friendLogin);
 
 function friendLogin(req, res) {
-	playname = req.body.playname;
-	console.log(playname);
+	var playname = req.body.playname;
+	var databaseref = req.body.databaseref;
+
 	console.log("friendLogin");
 	var state = generateRandomString(16);
-	res.cookie(stateKey, state);
+	var cooks = {
+		state: state,
+		playname: playname,
+		databaseref: databaseref
+	};
+	res.cookie(stateKey, JSON.stringify(cooks));
 
 	var scope = 'user-library-read playlist-modify-public playlist-modify-private';
 
@@ -76,6 +81,11 @@ app.get('/finish', friendMainCallback);
 function friendMainCallback (req, res) {
 	console.log("friendMainCallback");
 
+	var cooks = req.cookies ? req.cookies[stateKey] : null;
+	cooks = JSON.parse(cooks);
+	var playlistname = cooks.playname;
+	var databaseref = cooks.databaseref;
+
 	getFriendInitialTokens(req, res)
 	.then(getMyData)
 	.then(combineArrays)
@@ -85,12 +95,18 @@ function friendMainCallback (req, res) {
 		console.log(obj.data);
 		console.log(obj.data.size);
 
-		friendsongscomplete = Promise.resolve(obj);
+		var outObj = {
+			playlistname: playlistname,
+			databaseref: databaseref,
+			friend: obj
+		};
+		return outObj;
 	})
 	.then(getFullCommonIds)
 	.then(createPlaylists)
 	.then(() => {
-		res.redirect("postcreation.html");
+		res.cookie(stateKey, databaseref);
+		res.redirect("/completion");
 	})
 	.catch(error => {
 		console.error("Error somewhere in main callback");
@@ -100,28 +116,47 @@ function friendMainCallback (req, res) {
 
 app.post('/friendpublic', secondCallback)
 
-var friendname;
-var mysongscomplete;
-var friendsongscomplete;
-
 function secondCallback(req, res) {
 	console.log("secondCallback");
 
-	friendname = req.body.username;
-	playname = req.body.playname;
-	console.log(playname);
+	var friendname = req.body.username;
+	var playname = req.body.playname;
+	var databaseref = req.body.databaseref;
 
-	tokensreceived
-	.then(getFriendData)
-	.then(getUniqueIds)
-	.then(inObj => {
-		friendsongscomplete = Promise.resolve(inObj);
-	})
-	.then(getCommonIds)
-	.then(createMyPlaylist)
-	.then(() => {
-		res.redirect("postcreation.html");
+	database.ref(databaseref + '/tokens')
+	.once('value', data => {
+		var toks = data.val();
+
+		if (toks) {
+			getFriendData(toks, friendname)
+			.then(getUniqueIds)
+			.then(inObj => {
+				var outObj = {
+					friendname: friendname,
+					playname: playname,
+					databaseref: databaseref,
+					friend: inObj
+				}
+
+				return outObj;
+			})
+			.then(getCommonIds)
+			.then(createMyPlaylist)
+			.then(() => {
+				res.redirect("/completion");
+			});
+		}
 	});
+}
+
+app.get('/completion', completionFunc);
+
+function completionFunc(req, res) {
+	console.log("yello");
+	var databaseref = req.cookies[stateKey];
+	database.ref(databaseref).remove();
+	res.clearCookie(stateKey);
+	res.sendFile(path.join(__dirname + '/public/complete.html'));
 }
 
 function createPlaylists(inObj) {
@@ -161,7 +196,7 @@ function createMyPlaylist(inObj) {
 	getMyId(inObj.mytoken)
 	.then(id => {
 		var data = inObj.data;
-		var playlistname = playname || ("me and " + friendname);
+		var playlistname = inObj.playname || ("me and " + inObj.friendname);
 		makeEndpoint(playlistname, id, inObj.mytoken, data, false)
 		.then(addSongs)
 		.then(blah => {
@@ -175,8 +210,7 @@ function createOurPlaylist(inObj) {
 		getMyId(inObj.mytoken)
 		.then(id => {
 			var data = inObj.data;
-			var playlistname = playname || ("me and " + friendname);
-			makeEndpoint(playlistname, id, inObj.mytoken, data, true)
+			makeEndpoint(inObj.playlistname, id, inObj.mytoken, data, true)
 			.then(addSongs)
 			.then(playid => {
 				var outObj = {
@@ -333,54 +367,61 @@ function cleanup(data) {
 	return newarr;
 }
 
-function getFullCommonIds() {
+function getFullCommonIds(inObj) {
 	return new Promise((resolve, reject) => {
 		var commonarr;
 
-		Promise.all([mysongscomplete, friendsongscomplete])
-		.then(sets => {
-			commonarr = new Set([...sets[0].data].filter(id => sets[1].data.has(id)));
+		var databaseref = inObj.databaseref;
+
+		database.ref(databaseref)
+		.once("value", snapshot => {
+			var myref = snapshot.val();
+			var mydata = myref.mysongdata;
+
+			console.log(mydata);
+
+			commonarr = new Set(mydata.filter(id => inObj.friend.data.has(id)));
 
 			var outObj = {
 				data: commonarr,
-				mytoken: sets[0].token,
-				friendtoken: sets[1].token
+				mytoken: myref.tokens[0],
+				friendtoken: inObj.friend.token,
+				playlistname: inObj.playlistname
 			}
-			console.log(sets[0].token);
 			resolve(outObj);
-		})
-		.catch(error => {
-			console.error("Error in getCommonIds")
-			reject(error);
+		});
+	})
+}
+
+function getCommonIds(inObj) {
+	return new Promise((resolve, reject) => {
+		var commonarr;
+
+		var databaseref = inObj.databaseref;
+		console.log(databaseref);
+
+		database.ref(databaseref)
+		.once("value", snapshot => {
+			var myref = snapshot.val();
+			var mydata = myref.mysongdata;
+
+			commonarr = new Set(mydata.filter(id => inObj.friend.data.has(id)));
+
+			var outObj = {
+				data: commonarr,
+				mytoken: myref.tokens[0],
+				friendname: inObj.friendname,
+				playname: inObj.playname
+			}
+			resolve(outObj);
 		})
 	})
 }
 
-function getCommonIds() {
-	return new Promise((resolve, reject) => {
-		var commonarr;
-
-		Promise.all([mysongscomplete, friendsongscomplete])
-		.then(sets => {
-			commonarr = new Set([...sets[0].data].filter(id => sets[1].data.has(id)));
-
-			var outObj = {
-				data: commonarr,
-				mytoken: sets[1].token
-			}
-			resolve(outObj);
-		})
-		.catch(error => {
-			console.error("Error in getCommonIds")
-			reject(error);
-		})
-	})
-}
-
-function getFriendData(toks) {
+function getFriendData(toks, friend) {
 	console.log("getFriendData");
 	return new Promise((resolve, reject) => {
-		var name = 'users/' + friendname;
+		var name = 'users/' + friend;
 		getTotalPlaylists(toks[0], name)
 		.then(getPlaylistObjects)
 		.then(getTotalPlaylistTrackObjects)
@@ -525,9 +566,16 @@ function mainCallback(req, res) {
 
 	var tokenrequest = getInitialTokens(req, res);
 
+	var loc;
+
 	tokenrequest
 	.then(toks => {
-		tokensreceived = Promise.resolve(toks);
+		loc = database.ref().push();
+		loc.child('tokens').set(toks);
+		var locref = loc.toString();
+		locref = locref.split('/');
+		locref = locref[locref.length - 1];
+		res.cookie(stateKey, locref);
 	});
 
 	tokenrequest
@@ -536,10 +584,15 @@ function mainCallback(req, res) {
 	.then(getUniqueIds)
 	.then(obj => {
 		console.log("done");
-		console.log(obj.data);
+		// console.log(obj.data);
 		console.log(obj.data.size);
 
-		mysongscomplete = Promise.resolve(obj);
+		var arr = [...obj.data];
+
+		loc.child('mysongdata')
+		.set(arr, () => {
+			res.redirect('/friends.html');
+		});
 	})
 	.catch(error => {
 		console.error("Error somewhere in main callback");
@@ -549,7 +602,7 @@ function mainCallback(req, res) {
 
 function getInitialTokens(req, res) {
 	console.log("getInitialTokens");
-	code = req.query.code || null;
+	var code = req.query.code || null;
 	var state = req.query.state || null;
 	var storedState = req.cookies ? req.cookies[stateKey] : null;
 
@@ -586,8 +639,6 @@ function getInitialTokens(req, res) {
 				// 		access_token: access_token,
 				// 		refresh_token: refresh_token
 				// 	}));
-				res.redirect('/friends.html');
-
 				var toks = [access_token, refresh_token];
 				
 				resolve(toks);
@@ -883,9 +934,11 @@ function combineArrays(arr) {
 
 function getFriendInitialTokens(req, res) {
 	console.log("getFriendInitialTokens");
-	code = req.query.code || null;
+	var code = req.query.code || null;
 	var state = req.query.state || null;
 	var storedState = req.cookies ? req.cookies[stateKey] : null;
+	storedState = JSON.parse(storedState);
+	storedState = storedState.state;
 
 	if (state === null || state !== storedState) {
 		throw new Error("state does not match storedState");
