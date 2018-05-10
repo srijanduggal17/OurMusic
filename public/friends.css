@@ -1,0 +1,138 @@
+@import url('https://fonts.googleapis.com/css?family=Montserrat|Roboto+Mono');
+
+* {
+	font-family: 'Montserrat', sans-serif;
+	color: white;
+}
+
+html {
+	height: 100%;
+}
+
+body {
+	height: 100%;
+	margin: 0px;
+	background: black;
+}
+
+#maindiv {
+	display: grid;
+	grid-template-columns: 1fr 1fr .2fr 1fr 1fr;
+	grid-template-rows: 1fr 1fr 1fr 1fr 1fr 1fr;
+	grid-template-areas: "leftside top top top rightside"
+						 "leftside playlist playlist playlist rightside"
+						 "leftside header header header rightside"
+						 "leftside leftmiddle orsection rightmiddle rightside"
+						 "leftside leftbutton nothing rightbutton rightside"
+						 "leftside bottom bottom bottom rightside";
+}
+
+#loading {
+	display: none;
+	height: 100%;
+	grid-template-rows: 1fr;
+	grid-template-columns: 1fr;
+}
+
+#loadmessage {
+	text-align: center;
+	justify-self: center;
+	align-self: center;
+}
+
+#playlistdiv {
+	grid-area: playlist;
+	text-align: center;
+	align-self: center;
+	justify-self: center;
+}
+
+#con {
+	grid-area: header;
+	text-align: center;
+	align-self: end;
+	border-left: 2px gray solid;
+	border-right: 2px gray solid;
+	padding-left: 2%;
+	padding-right: 2%;
+}
+
+#orsection {
+	grid-area: orsection;
+	text-align: center;
+	align-self: center;
+	justify-self: center;
+	color: grey;
+}
+
+input {
+	color: white;
+	background-color: black;
+	border: solid .5px grey;
+	border-top: none;
+	text-align: center;
+	padding-top: none;
+	padding-bottom: 2px;
+}
+
+input::placeholder {
+	color: grey;
+}
+
+input:focus {
+	outline: none;
+}
+
+h2 {
+	color: #4CAF50;
+}
+
+h3 {
+	font-family: 'Roboto Mono', monospace;
+}
+
+#frienddiv {
+	grid-area: leftmiddle;
+	justify-self: center;
+	align-self: start;
+	text-align: center;
+}
+
+#login {
+	grid-area: rightmiddle;
+	justify-self: center;
+	align-self: start;
+	text-align: center;
+}
+
+#leftbtn {
+	grid-area: leftbutton;
+	justify-self: center;
+	align-self: start;
+}
+
+#rightbtn {
+	grid-area: rightbutton;
+	justify-self: center;
+	align-self: start;
+}
+
+.btn {
+	margin-top: 1em;
+	margin-left: auto;
+	margin-right: auto;
+	display: block;
+	border-radius: 1em;
+    background-color: #4CAF50;
+    border: none;
+    color: #e0e0e0;
+    padding: 2% 5%;
+    text-align: center;
+    font-size: 1em;
+    font-family: 'Roboto Mono', monospace;
+}
+
+.btn:hover {
+	background-color: #5ac263; 
+	color: white; 
+}

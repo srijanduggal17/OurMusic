@@ -2,28 +2,33 @@
 <html>
 <head>
 	<title>OurMusic</title>
+	<link rel="stylesheet" type="text/css" href="friends.css">
 </head>
 <body>
 	<div id="maindiv">
-		<h1>Enter a playlist name below</h1>
-	    <input id="playnameinput" name="playname" type="text">
-		<h2>Connect to your friend's account</h2>
+		<div id="playlistdiv">
+			<h3>Enter a playlist name below</h3>
+			<input id="playnameinput" autocomplete="off" name="playname" type="text" placeholder="type here">
+		</div>
+		<h2 id="con">Connect to your friend's account</h2>
 		<div id="frienddiv">
 			<h3>Access their public tracks</h3>
 			<form id="friendpublicform" method="post" action="/friendpublic" onsubmit="return submitFunc('public')">
-			    <input id="username" type="text" name="username">
-			    <input id="submitbutton" type="submit">
+				<input id="username" autocomplete="off" type="text" name="username" placeholder="enter username">
 			</form>
 		</div>
-		<p>OR</p>
+		<input form="friendpublicform" id="leftbtn" class="btn" type="submit">
 		<div id="login">
 			<h3>Log them in to access all their songs</h3>
 			<form id="friendloginform" method="post" action="/friendlogin" onsubmit="return submitFunc('login')">
-				<input type="submit" value="Log in with Spotify">
 			</form>
 		</div>
+		<input form="friendloginform" id="rightbtn" class="btn" type="submit" value="Log in with Spotify">
+		<p id="orsection">OR</p>
 	</div>
-	<p id="loading">Loading</p>
+	<div id="loading">
+		<p id="loadmessage">Loading</p>
+	</div>
 	<script type="text/javascript" src="friends.js"></script>
 </body>
 </html>
