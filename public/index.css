@@ -1,5 +1,8 @@
 @import url('https://fonts.googleapis.com/css?family=Montserrat|Roboto+Mono');
 
+
+
+
 * {
 	font-family: 'Montserrat', sans-serif;
 }
@@ -13,10 +16,9 @@ body {
 	margin: 0px;
 	display: grid;
 	grid-template-columns: 1fr 2fr 1fr;
-	grid-template-rows: 1fr 2fr 1fr 1fr;
+	grid-template-rows: 1fr 2fr 1fr;
 	grid-template-areas: "leftside top rightside"
 						 "leftside middle rightside"
-						 "leftside button rightside"
 						 "leftside bottom rightside";
 	background: black;
 }
@@ -28,12 +30,6 @@ body {
 	border-right: 2px gray solid;
 	padding-left: 2%;
 	padding-right: 2%;
-}
-
-#buttonspot {
-	grid-area: button;
-	align-self: center;
-	justify-self: center;
 }
 
 .btn {

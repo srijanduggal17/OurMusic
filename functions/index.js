@@ -1,8 +1,8 @@
 const functions = require('firebase-functions');
 const path = require('path');
 
-var express = require('express'); // Express web server framework
-var request = require('request'); // "Request" library
+var express = require('express'); 
+var request = require('request'); 
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
@@ -1053,4 +1053,4 @@ app.listen(8889, () => {
 	return text;
  };
 
- exports.app = functions.https.onRequest(app);
+exports.app = functions.https.onRequest(app);
