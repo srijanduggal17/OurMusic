@@ -174,6 +174,7 @@ function completionFunc(req, res) {
 }
 
 function createPlaylists(inObj) {
+	console.log("createPlaylists");
 	return new Promise((resolve, reject) => {
 		createOurPlaylist(inObj)
 		.then(followPlaylist)

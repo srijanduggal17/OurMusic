@@ -7,10 +7,9 @@ var embedlink = "https://open.spotify.com/embed/" + uri.join("/");
 
 var newelement = document.createElement("iframe");
 newelement.src = embedlink;
-newelement.width = "400px";
-newelement.height = "600px";
 newelement.frameborder = "0";
 newelement.allowtransparency = "true";
 newelement.allow = "encrypted-media";
+newelement.className = "playlistembed";
 
-document.body.appendChild(newelement);
+document.getElementById("maindiv").appendChild(newelement);
