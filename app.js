@@ -9,8 +9,8 @@ var rp = require('request-promise');
 var stateKey = '__session';
 var app = express();
 
-var client_id = ''; // Your client id
-var client_secret = ''; // Your secret
+var client_id = '15ec5ccbf8d648378ecefdf8bab3f58d'; // Your client id
+var client_secret = 'a40cc81bc12a4ea0adcb04a8638bd1f2'; // Your secret
 var redirect_uri = 'http://localhost:8889/callback/'; // Your redirect uri
 
 var firebase = require("firebase");
@@ -104,8 +104,12 @@ function friendMainCallback (req, res) {
 	})
 	.then(getFullCommonIds)
 	.then(createPlaylists)
-	.then(() => {
-		res.cookie(stateKey, databaseref);
+	.then(uri => {
+		var outcookie = {
+			databaseref: databaseref,
+			uri: uri
+		};
+		res.cookie(stateKey, JSON.stringify(outcookie));
 		res.redirect("/completion");
 	})
 	.catch(error => {
@@ -142,7 +146,13 @@ function secondCallback(req, res) {
 			})
 			.then(getCommonIds)
 			.then(createMyPlaylist)
-			.then(() => {
+			.then(uri => {
+				var databaseref = req.cookies[stateKey];
+				var outcookie = {
+					databaseref: databaseref,
+					uri: uri
+				};
+				res.cookie(stateKey, JSON.stringify(outcookie));
 				res.redirect("/completion");
 			});
 		}
@@ -153,21 +163,33 @@ app.get('/completion', completionFunc);
 
 function completionFunc(req, res) {
 	console.log("yello");
-	var databaseref = req.cookies[stateKey];
+	var incookie = req.cookies[stateKey];
+	incookie = JSON.parse(incookie);
+	console.log(incookie);
+	var databaseref = incookie.databaseref;
 	database.ref(databaseref).remove();
 	res.clearCookie(stateKey);
-	res.sendFile(path.join(__dirname + '/public/complete.html'));
+	res.cookie(stateKey, incookie.uri);
+	res.redirect('complete.html');
 }
 
 function createPlaylists(inObj) {
-	createOurPlaylist(inObj)
-	.then(followPlaylist);
+	return new Promise((resolve, reject) => {
+		createOurPlaylist(inObj)
+		.then(followPlaylist)
+		.then(uri => {
+			resolve(uri);
+		});
+	});
 }
 
 function followPlaylist(inObj) {
 	console.log("followPlaylist");
 	var ownerid = inObj.ownerid;
 	var playlistid = inObj.playlistid;
+	playlistid = playlistid.split(":");
+	playlistid = playlistid[playlistid.length - 1];
+
 	var token = inObj.friendtoken;
 
 	var options = {
@@ -183,7 +205,7 @@ function followPlaylist(inObj) {
 	return new Promise ((resolve, reject) => {
 		rp(options)
 			.then(body => {
-				resolve("success");
+				resolve(inObj.playlistid);
 			})
 			.catch(error => {
 				console.error("Error in postTracks");
@@ -193,14 +215,17 @@ function followPlaylist(inObj) {
 }
 
 function createMyPlaylist(inObj) {
-	getMyId(inObj.mytoken)
-	.then(id => {
-		var data = inObj.data;
-		var playlistname = inObj.playname || ("me and " + inObj.friendname);
-		makeEndpoint(playlistname, id, inObj.mytoken, data, false)
-		.then(addSongs)
-		.then(blah => {
-			console.log("everything done");
+	return new Promise ((resolve, reject) => {
+		getMyId(inObj.mytoken)
+		.then(id => {
+			var data = inObj.data;
+			var playlistname = inObj.playname || ("me and " + inObj.friendname);
+			makeEndpoint(playlistname, id, inObj.mytoken, data, false)
+			.then(addSongs)
+			.then(uri => {
+				console.log("everything done");
+				resolve(uri);
+			});
 		});
 	});
 }
@@ -212,11 +237,11 @@ function createOurPlaylist(inObj) {
 			var data = inObj.data;
 			makeEndpoint(inObj.playlistname, id, inObj.mytoken, data, true)
 			.then(addSongs)
-			.then(playid => {
+			.then(uri => {
 				var outObj = {
 					friendtoken: inObj.friendtoken,
 					ownerid: id,
-					playlistid: playid
+					playlistid: uri
 				}
 				console.log("ourPlaylist created");
 				resolve(outObj);
@@ -274,7 +299,7 @@ function makeEndpoint(name, username, token, data, collab) {
 			.then(body => {
 				var outObj = {
 					token: token,
-					id: body.id,
+					id: body.uri,
 					data: data,
 					userid: username
 				};
@@ -292,6 +317,8 @@ function addSongs(inObj) {
 
 	var data = inObj.data;
 	var playlistid = inObj.id;
+	playlistid = playlistid.split(":");
+	playlistid = playlistid[playlistid.length - 1];
 	var token = inObj.token;
 	var userid = inObj.userid;
 
@@ -327,7 +354,7 @@ function addSongs(inObj) {
 	return new Promise((resolve, reject) => {
 		Promise.all(promiseArr)
 			.then(() => {
-				resolve(playlistid);
+				resolve(inObj.id);
 			})
 			.catch(error => {
 				console.error("Error in addSongs");

@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css?family=Montserrat|Roboto+Mono');
+
+* {
+	font-family: 'Montserrat', sans-serif;
+}
+
+html {
+	height: 100%;
+}
+
+body {
+	height: 100%;
+	margin: 0px;
+	display: grid;
+	grid-template-columns: 1fr 2fr 1fr;
+	grid-template-rows: 1fr 2fr 1fr 1fr;
+	grid-template-areas: "leftside top rightside"
+						 "leftside middle rightside"
+						 "leftside button rightside"
+						 "leftside bottom rightside";
+	background: black;
+}
+
+#maindiv {
+	grid-area: middle;
+	text-align: center;
+	border-left: 2px gray solid;
+	border-right: 2px gray solid;
+	padding-left: 2%;
+	padding-right: 2%;
+}
+
+#buttonspot {
+	grid-area: button;
+	align-self: center;
+	justify-self: center;
+}
+
+.btn {
+	border-radius: 1em;
+	background-color: #4CAF50;
+	border: none;
+	color: #e0e0e0;
+	padding: 2% 5%;
+	text-align: center;
+	font-size: 1.5em;
+	font-family: 'Roboto Mono', monospace;
+}
+
+.btn:hover {
+	background-color: #5ac263; 
+	color: white;
+	padding: 3% 7.5%;
+}
+
+p {
+	color: #9ea8ba;
+	font-size: 2em;
+}
+
+h1 {
+	color: white;
+	font-size: 3em;
+	font-family: 'Roboto Mono', monospace;
+}
