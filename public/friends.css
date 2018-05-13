@@ -15,56 +15,6 @@ body {
 	background: black;
 }
 
-#maindiv {
-	display: grid;
-	grid-template-columns: 1fr 1fr .2fr 1fr 1fr;
-	grid-template-rows: 1fr 1fr 1fr 1fr 1fr 1fr;
-	grid-template-areas: "leftside top top top rightside"
-						 "leftside playlist playlist playlist rightside"
-						 "leftside header header header rightside"
-						 "leftside leftmiddle orsection rightmiddle rightside"
-						 "leftside leftbutton nothing rightbutton rightside"
-						 "leftside bottom bottom bottom rightside";
-}
-
-#loading {
-	display: none;
-	height: 100%;
-	grid-template-rows: 1fr;
-	grid-template-columns: 1fr;
-}
-
-#loadmessage {
-	text-align: center;
-	justify-self: center;
-	align-self: center;
-}
-
-#playlistdiv {
-	grid-area: playlist;
-	text-align: center;
-	align-self: center;
-	justify-self: center;
-}
-
-#con {
-	grid-area: header;
-	text-align: center;
-	align-self: end;
-	border-left: 2px gray solid;
-	border-right: 2px gray solid;
-	padding-left: 2%;
-	padding-right: 2%;
-}
-
-#orsection {
-	grid-area: orsection;
-	text-align: center;
-	align-self: center;
-	justify-self: center;
-	color: grey;
-}
-
 input {
 	color: white;
 	background-color: black;
@@ -91,15 +41,69 @@ h3 {
 	font-family: 'Roboto Mono', monospace;
 }
 
+#maindiv {
+	height: 100%;
+	display: grid;
+	grid-template-columns: .5fr 4fr .5fr;
+	grid-template-rows: 2fr 1fr .8fr 1.5fr 1fr .5fr 1.5fr 1fr 2fr;
+	grid-template-areas: "leftside top rightside"
+						 "leftside playlist rightside"
+						 "leftside header rightside"
+						 "leftside public rightside"
+						 "leftside leftbutton rightside"
+						 "leftside orsection rightside"
+						 "leftside login rightside"
+						 "leftside rightbutton rightside"
+						 "leftside bottom rightside";
+}
+
+#loading {
+	display: none;
+	height: 100%;
+	grid-template-rows: 1fr;
+	grid-template-columns: 1fr;
+}
+
+#loadmessage {
+	text-align: center;
+	justify-self: center;
+	align-self: center;
+}
+
+#playlistdiv {
+	grid-area: playlist;
+	text-align: center;
+	align-self: center;
+	justify-self: center;
+}
+
+#heading {
+	grid-area: header;
+	text-align: center;
+	align-self: end;
+	border-left: 2px gray solid;
+	border-right: 2px gray solid;
+	padding-left: 2%;
+	padding-right: 2%;
+}
+
+#orsection {
+	grid-area: orsection;
+	text-align: center;
+	align-self: center;
+	justify-self: center;
+	color: grey;
+}
+
 #frienddiv {
-	grid-area: leftmiddle;
+	grid-area: public;
 	justify-self: center;
 	align-self: start;
 	text-align: center;
 }
 
 #login {
-	grid-area: rightmiddle;
+	grid-area: login;
 	justify-self: center;
 	align-self: start;
 	text-align: center;
@@ -108,13 +112,13 @@ h3 {
 #leftbtn {
 	grid-area: leftbutton;
 	justify-self: center;
-	align-self: start;
+	align-self: center;
 }
 
 #rightbtn {
 	grid-area: rightbutton;
 	justify-self: center;
-	align-self: start;
+	align-self: center;
 }
 
 .btn {
@@ -135,4 +139,41 @@ h3 {
 .btn:hover {
 	background-color: #5ac263; 
 	color: white; 
+}
+
+@media only screen and (min-width: 600px) {
+	#maindiv {
+		grid-template-columns: .1fr 1fr .2fr 1fr .1fr;
+		grid-template-rows: 1fr 1fr 1fr 1fr 1fr 1fr;
+		grid-template-areas: "leftside top top top rightside"
+							 "leftside playlist playlist playlist rightside"
+							 "leftside header header header rightside"
+							 "leftside public orsection login rightside"
+							 "leftside leftbutton nothing rightbutton rightside"
+							 "leftside bottom bottom bottom rightside";
+	}
+
+	#heading {
+		border: none;
+	}
+	
+	#rightbtn {
+		align-self: start;
+	}
+	
+	#leftbtn {
+		align-self: start;
+	}
+}
+
+@media only screen and (min-width: 768px) {
+	#maindiv {
+		grid-template-columns: .3fr 1fr .2fr 1fr .3fr;
+	}
+}
+
+@media only screen and (min-width: 1024px) {
+	#maindiv {
+		grid-template-columns: 1fr 1fr .2fr 1fr 1fr;
+	}
 }
