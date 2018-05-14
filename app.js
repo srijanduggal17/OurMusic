@@ -16,10 +16,10 @@ var redirect_uri = 'http://localhost:8889/callback/'; // Your redirect uri
 var firebase = require("firebase");
 var config = {
 	apiKey: "",
-	authDomain: "our-music-on-spotify.firebaseapp.com",
-	databaseURL: "https://our-music-on-spotify.firebaseio.com",
-	projectId: "our-music-on-spotify",
-	storageBucket: "our-music-on-spotify.appspot.com",
+	authDomain: "",
+	databaseURL: "",
+	projectId: "",
+	storageBucket: "",
 	messagingSenderId: ""
 };
 firebase.initializeApp(config);
