@@ -3,6 +3,7 @@
 * {
 	font-family: 'Montserrat', sans-serif;
 	color: white;
+	text-align: center;
 }
 
 html {
@@ -15,27 +16,41 @@ body {
 	background: black;
 }
 
-.playlistembed {
-	border: none;
-	grid-area: middle;
-	justify-self: center;
-	align-self: start;
-	height: 90%;
-	width: 100%;
+p {
+	grid-area: header;
+	font-size: 1.2em;
 }
 
 #maindiv {
 	display: grid;
-	grid-template-columns: 1fr 2fr 1fr;
+	grid-template-columns: 0fr 2fr 0fr;
 	grid-template-rows: 1fr 3fr;
 	grid-template-areas: "leftside header rightside"
-						 "leftside middle rightside";
+						 "leftside playlist rightside";
 	height: 100%;
 }
 
-#mess {
-	text-align: center;
-	grid-area: header;
-	align-self: center;
-	font-size: 2em;
+.playlistembed {
+	border: none;
+	grid-area: playlist;
+	justify-self: center;
+	align-self: start;
+	height: 100%;
+	width: 100%;
+}
+
+
+
+@media only screen and (min-width: 600px) {
+	p {
+		font-size: 2em;
+	}
+
+	#maindiv {
+		grid-template-columns: 1fr 2fr 1fr;
+	}
+	
+	.playlistembed {
+		height: 90%;
+	}
 }

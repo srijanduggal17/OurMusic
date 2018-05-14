@@ -1,8 +1,6 @@
 const functions = require('firebase-functions');
-const path = require('path');
 
 var express = require('express'); 
-var request = require('request'); 
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
@@ -15,23 +13,24 @@ var client_id = ''; // Your client id
 var client_secret = ''; // Your secret
 var redirect_uri = ''; // Your redirect uri
 
-var firebase = require("firebase");
-
 const admin = require('firebase-admin');
 const config = functions.config().firebase;
 admin.initializeApp(config);
 var database = admin.database();
 
-app.use(cookieParser())
+app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/login', postLogin);
 
 function postLogin(req, res) {
-	console.log("postLogin");
 	var state = generateRandomString(16);
+	var cooks = {
+		state: state,
+		redir: 'https://our-music-on-spotify.firebaseapp.com/callback/'
+	};
 	res.setHeader('Cache-Control', 'private');
-	res.cookie(stateKey, state);
+	res.cookie(stateKey, JSON.stringify(cooks));
 
 	var scope = 'user-library-read playlist-modify-public playlist-modify-private';
 	res.redirect('https://accounts.spotify.com/authorize?' +
@@ -48,15 +47,12 @@ function postLogin(req, res) {
 app.post('/friendlogin', friendLogin);
 
 function friendLogin(req, res) {
-	var playname = req.body.playname;
-	var databaseref = req.body.databaseref;
-
-	console.log("friendLogin");
 	var state = generateRandomString(16);
 	var cooks = {
 		state: state,
-		playname: playname,
-		databaseref: databaseref
+		playname: req.body.playname,
+		databaseref: req.body.databaseref,
+		redir: 'https://our-music-on-spotify.firebaseapp.com/finish/'
 	};
 
 	res.setHeader('Cache-Control', 'private');
@@ -78,174 +74,139 @@ function friendLogin(req, res) {
 app.get('/finish', friendMainCallback);
 
 function friendMainCallback (req, res) {
-	console.log("friendMainCallback");
-
 	var cooks = req.cookies ? req.cookies[stateKey] : null;
 	cooks = JSON.parse(cooks);
 	var playlistname = cooks.playname;
 	var databaseref = cooks.databaseref;
 
-	getFriendInitialTokens(req, res)
-	.then(getMyData)
-	.then(combineArrays)
-	.then(getUniqueIds)
-	.then(obj => {
-		console.log("done");
-		console.log(obj.data);
-		console.log(obj.data.size);
-
-		var outObj = {
-			playlistname: playlistname,
-			databaseref: databaseref,
-			friend: obj
-		};
-		return outObj;
-	})
-	.then(getFullCommonIds)
-	.then(createPlaylists)
-	.then(uri => {
-		var outcookie = {
-			databaseref: databaseref,
-			uri: uri
-		};
-		res.cookie(stateKey, JSON.stringify(outcookie));
-		res.redirect("/completion");
-	})
-	.catch(error => {
-		console.error("Error in friend main callback");
-		console.log(error);
-	});
-}
-
-app.post('/friendpublic', secondCallback)
-
-function secondCallback(req, res) {
-	console.log("secondCallback");
-
-	var friendname = req.body.username;
-	var playname = req.body.playname;
-	var databaseref = req.body.databaseref;
-	console.log(databaseref);
-
-	database.ref(databaseref + '/tokens')
-	.once('value', data => {
-		var toks = data.val();
-		getFriendData(toks, friendname)
+	getInitialTokens(req, res)
+		.then(getMyData)
+		.then(combineArrays)
 		.then(getUniqueIds)
-		.then(inObj => {
-			var outObj = {
-				friendname: friendname,
-				playname: playname,
+		.then(obj => {
+			return {
+				playname: playlistname,
 				databaseref: databaseref,
-				friend: inObj
-			}
-
-			return outObj;
+				frienddata: obj.data,
+				friendinfo: obj.token
+			};
 		})
 		.then(getCommonIds)
-		.then(createMyPlaylist)
+		.then(createOurPlaylist)
+		.then(followPlaylist)
 		.then(uri => {
-			var databaseref = req.cookies[stateKey];
 			var outcookie = {
 				databaseref: databaseref,
 				uri: uri
 			};
 			res.cookie(stateKey, JSON.stringify(outcookie));
-			res.redirect("/completion");
+			res.redirect('/completion');
+		})
+		.catch(error => {
+			res.send('Internal Server Error');
+			throw error;
 		});
-	});
+}
+
+app.post('/friendpublic', secondCallback);
+
+function secondCallback(req, res) {
+	var friendname = req.body.username;
+	var playname = req.body.playname;
+	var databaseref = req.body.databaseref;
+
+	database.ref(databaseref + '/tokens')
+		.once('value')
+		.then(data => {
+			var toks = data.val();
+			getFriendData(toks, friendname)
+				.then(getUniqueIds)
+				.then(inObj => {
+					return {
+						friendinfo: friendname,
+						playname: playname,
+						databaseref: databaseref,
+						frienddata: inObj.data
+					};
+				})
+				.then(getCommonIds)
+				.then(createMyPlaylist)
+				.then(uri => {
+					var databaseref = req.cookies[stateKey];
+					var outcookie = {
+						databaseref: databaseref,
+						uri: uri
+					};
+					res.cookie(stateKey, JSON.stringify(outcookie));
+					res.redirect('/completion');
+				})
+				.catch(error => {
+					res.send('Internal Server Error');
+					throw error;
+				});
+		})
+		.catch(error => {
+			res.send('Internal Server Error');
+			throw error;
+		});
 }
 
 app.get('/completion', completionFunc);
 
 function completionFunc(req, res) {
-	console.log("yello");
-	var incookie = req.cookies[stateKey];
-	incookie = JSON.parse(incookie);
-	console.log(incookie);
-	var databaseref = incookie.databaseref;
-	database.ref(databaseref).remove();
-	res.clearCookie(stateKey);
-	res.cookie(stateKey, incookie.uri);
-	res.redirect('complete.html');
-}
-
-function createPlaylists(inObj) {
-	console.log("createPlaylists");
-	return new Promise((resolve, reject) => {
-		createOurPlaylist(inObj)
-		.then(followPlaylist)
-		.then(uri => {
-			resolve(uri);
+	var incookie = JSON.parse(req.cookies[stateKey]);
+	database.ref(incookie.databaseref).remove()
+		.then(() => {
+			res.clearCookie(stateKey);
+			res.cookie(stateKey, incookie.uri);
+			res.redirect('complete.html');
+		})
+		.catch(error => {
+			res.send('Internal Server Error');
+			throw error;
 		});
-	});
 }
 
 function followPlaylist(inObj) {
-	console.log("followPlaylist");
-	var ownerid = inObj.ownerid;
 	var playlistid = inObj.playlistid;
-	playlistid = playlistid.split(":");
+	playlistid = playlistid.split(':');
 	playlistid = playlistid[playlistid.length - 1];
 	
-	var token = inObj.friendtoken;
-
 	var options = {
 		method: 'PUT',
-		url: 'https://api.spotify.com/v1/users/' + ownerid + '/playlists/' + playlistid + '/followers',
+		url: 'https://api.spotify.com/v1/users/' + inObj.ownerid + '/playlists/' + playlistid + '/followers',
 		headers: {
-			'Authorization': 'Bearer ' + token,
+			'Authorization': 'Bearer ' + inObj.friendtoken,
 			'Content-Type' : 'application/json'
 		},
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
-			.then(body => {
-				resolve(inObj.playlistid);
-			})
-			.catch(error => {
-				console.error("Error in postTracks");
-				reject(error);
-			});
-	});
+	return rp(options)
+		.then(() => inObj.playlistid);
 }
 
 function createMyPlaylist(inObj) {
-	return new Promise ((resolve, reject) => {
-		getMyId(inObj.mytoken)
+	return getMyId(inObj.mytoken)
 		.then(id => {
-			var data = inObj.data;
-			var playlistname = inObj.playname || ("me and " + inObj.friendname);
-			makeEndpoint(playlistname, id, inObj.mytoken, data, false)
-			.then(addSongs)
-			.then(uri => {
-				console.log("everything done");
-				resolve(uri);
-			});
+			return makeEndpoint(inObj.playname, id, inObj.mytoken, inObj.data, false)
+				.then(addSongs);
 		});
-	});
 }
 
 function createOurPlaylist(inObj) {
-	return new Promise ((resolve, reject) => {
-		getMyId(inObj.mytoken)
+	return getMyId(inObj.mytoken)
 		.then(id => {
-			var data = inObj.data;
-			makeEndpoint(inObj.playlistname, id, inObj.mytoken, data, true)
-			.then(addSongs)
-			.then(uri => {
-				var outObj = {
-					friendtoken: inObj.friendtoken,
-					ownerid: id,
-					playlistid: uri
-				}
-				console.log("ourPlaylist created");
-				resolve(outObj);
-			});
+			return makeEndpoint(inObj.playname, id, inObj.mytoken, inObj.data, true)
+				.then(addSongs)
+				.then(uri => {
+					return {
+						friendtoken: inObj.friendinfo,
+						ownerid: id,
+						playlistid: uri
+					};
+				});
 		});
-	});
 }
 
 function getMyId(token) {
@@ -258,24 +219,15 @@ function getMyId(token) {
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
-			.then(body => {
-				resolve(body.id);
-			})
-			.catch(error => {
-				console.error("Error in makeEndpoint");
-				reject(error);
-			});
-	});
+	return rp(options)
+		.then(body => body.id);
 }
 
 function makeEndpoint(name, username, token, data, collab) {
-	console.log("makeEndpoint");
-
 	var reqbod = {
 		name: name,
-	}
+	};
+
 	if (collab) {
 		reqbod.public = false;
 		reqbod.collaborative = true;
@@ -292,30 +244,21 @@ function makeEndpoint(name, username, token, data, collab) {
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
-			.then(body => {
-				var outObj = {
-					token: token,
-					id: body.uri,
-					data: data,
-					userid: username
-				};
-				resolve(outObj);
-			})
-			.catch(error => {
-				console.error("Error in makeEndpoint");
-				reject(error);
-			});
-	});
+	return rp(options)
+		.then(body => {
+			return {
+				token: token,
+				id: body.uri,
+				data: data,
+				userid: username
+			};
+		});
 }
 
 function addSongs(inObj) {
-	console.log("addSongs");
-
 	var data = inObj.data;
 	var playlistid = inObj.id;
-	playlistid = playlistid.split(":");
+	playlistid = playlistid.split(':');
 	playlistid = playlistid[playlistid.length - 1];
 	var token = inObj.token;
 	var userid = inObj.userid;
@@ -326,43 +269,22 @@ function addSongs(inObj) {
 
 	var promiseArr = [];
 
-	var prevoffset = -100;
 	var numtimes = Math.ceil(totalsongs/100);
 
 	for (let i = 0; i < numtimes; i++) {
 		let startind = i*100;
 		let endind = i*100 + 100;
-
 		let currentarr = data.slice(startind, endind);
 
-		currentprom = new Promise((resolve, reject) => {
-			postTracks(token, userid, currentarr, playlistid)
-			.then(arr => {
-				resolve("resolved");
-			})
-			.catch(error => {
-				console.error("Error in loop of addSongs");
-				reject(error);
-			});
-		});
-
+		let currentprom = postTracks(token, userid, currentarr, playlistid);
 		promiseArr.push(currentprom);
 	}
 
-	return new Promise((resolve, reject) => {
-		Promise.all(promiseArr)
-			.then(() => {
-				resolve(inObj.id);
-			})
-			.catch(error => {
-				console.error("Error in addSongs");
-				reject(error);
-			});
-	});
+	return Promise.all(promiseArr)
+		.then(() => inObj.id);
 }
 
 function postTracks(token, userid, tracks, playlistid) {
-	console.log("postTracks");
 	var options = {
 		method: 'POST',
 		form: JSON.stringify({uris: tracks}),
@@ -374,98 +296,52 @@ function postTracks(token, userid, tracks, playlistid) {
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
-			.then(body => {
-				resolve("success");
-			})
-			.catch(error => {
-				console.error("Error in postTracks");
-				reject(error);
-			});
-	});
+	return rp(options);
 }
 
 function cleanup(data) {
-	var arr = [...data];
-	var newarr = arr.map(x => 'spotify:track:' + x);
-	return newarr;
-}
-
-function getFullCommonIds(inObj) {
-	return new Promise((resolve, reject) => {
-		var commonarr;
-
-		var databaseref = inObj.databaseref;
-
-		database.ref(databaseref)
-		.once("value", snapshot => {
-			var myref = snapshot.val();
-			var mydata = myref.mysongdata;
-
-			console.log(mydata);
-
-			commonarr = new Set(mydata.filter(id => inObj.friend.data.has(id)));
-
-			var outObj = {
-				data: commonarr,
-				mytoken: myref.tokens[0],
-				friendtoken: inObj.friend.token,
-				playlistname: inObj.playlistname
-			}
-			resolve(outObj);
-		});
-	})
+	return [...data].map(x => 'spotify:track:' + x);
 }
 
 function getCommonIds(inObj) {
 	return new Promise((resolve, reject) => {
 		var commonarr;
-
 		var databaseref = inObj.databaseref;
-		console.log(databaseref);
 
 		database.ref(databaseref)
-		.once("value", snapshot => {
-			var myref = snapshot.val();
-			var mydata = myref.mysongdata;
+			.once('value')
+			.then(snapshot => {
+				var myref = snapshot.val();
+				var mydata = myref.mysongdata;
 
-			commonarr = new Set(mydata.filter(id => inObj.friend.data.has(id)));
+				commonarr = new Set(mydata.filter(id => inObj.frienddata.has(id)));
 
-			var outObj = {
-				data: commonarr,
-				mytoken: myref.tokens[0],
-				friendname: inObj.friendname,
-				playname: inObj.playname
-			}
-			resolve(outObj);
-		})
-	})
+				var outObj = {
+					data: commonarr,
+					mytoken: myref.tokens[0],
+					friendinfo: inObj.friendinfo,
+					playname: inObj.playname
+				};
+				resolve(outObj);
+			})
+			.catch(error => reject(error));
+	});
 }
 
 function getFriendData(toks, friend) {
-	console.log("getFriendData");
-	return new Promise((resolve, reject) => {
-		var name = 'users/' + friend;
-		getTotalPlaylists(toks[0], name)
+	var name = 'users/' + friend;
+	return getTotalPlaylists(toks[0], name)
 		.then(getPlaylistObjects)
 		.then(getTotalPlaylistTrackObjects)
 		.then(arr => {
-			var outObj = {
+			return {
 				data: arr,
 				token: toks[0]
-			}
-			resolve(outObj);
-		})
-		.catch(error => {
-			console.error("Error in playlistTracks");
-			reject(error);
+			};
 		});
-	})
 }
 
 function getTotalPlaylists(token, username) {
-	console.log("getFriendTotalPlaylists");
 	var options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/' + username + '/playlists?',
@@ -473,81 +349,33 @@ function getTotalPlaylists(token, username) {
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
+	return rp(options)
 		.then(body => {
-			console.log('Total friend playlists received');
-			var outObj = {
+			return {
 				totalplaylists: body.total,
 				username: username,
 				token: token
-			}
-			resolve(outObj);
-		})
-		.catch(error => {
-			console.error("Error in getFriendTotalPlaylists");
-			reject(error);
+			};
 		});
-	});
 }
 
 function getPlaylistObjects(inObj) {
-	console.log("getFriendPlaylistObjects");
 	var totalplaylists = inObj.totalplaylists;
 	var token = inObj.token;
 	var username = inObj.username;
 
-	var objArray = [];
-	var promiseArr = [];
+	var outObj = loopingRequest(playlistObjectRequest, token, totalplaylists, username);
 
-	var prevoffset = -50;
-	var numtimes = Math.ceil(totalplaylists/50);
-
-	for (let i = 0; i < numtimes; i++) {
-		let paramobj = {
-			limit: 50,
-			offset: prevoffset + 50
-		}; 
-		let params = querystring.stringify(paramobj);
-		prevoffset = paramobj.offset;
-
-		currentprom = new Promise((resolve, reject) => {
-			playlistObjectRequest(token, params, username)
-			.then(arr => {
-				var playlistArr = [];
-				for (let j = 0; j < arr.length; j++) {
-					playlistArr.push(arr[j].tracks);
-				}
-				objArray.push(...playlistArr);
-				resolve("resolved");
-			})
-			.catch(error => {
-				console.error("Error in loop of getFriendPlaylistObjects");
-				reject(error);
-			});
+	return Promise.all(outObj.promisearray)
+		.then(() => {
+			return {
+				token: token,
+				data: outObj.objectarray
+			};
 		});
-
-		promiseArr.push(currentprom);
-	}
-
-	return new Promise((resolve, reject) => {
-		Promise.all(promiseArr)
-			.then(() => {
-				let outObj = {
-					token: token,
-					data: objArray
-				}
-				resolve(outObj);
-			})
-			.catch(error => {
-				console.error("Error in getFriendPlaylistObjects");
-				reject(error);
-			});
-	});
 }
 
 function playlistObjectRequest(token, params, username) {
-	console.log("friendPlaylistObjectRequest");
 	var options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/' + username +'/playlists?' + params + '',
@@ -555,171 +383,79 @@ function playlistObjectRequest(token, params, username) {
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
-			.then(body => {
-				var resultarr = body.items;
-				resolve(resultarr);
-			})
-			.catch(error => {
-				console.error("Error in playlistObjectRequest");
-				reject(error);
-			});
-	});
+	return rp(options)
+		.then(body => body.items.map(x => x.tracks));
 }
 
 function getUniqueIds(inObj) {
-	console.log("getUniqueIds");
-	var arr = inObj.data;
-
-	var mydataset = new Set();
-	for (let i = 0; i < arr.length; i++) {
-		mydataset.add(arr[i].id);
-	}
-
-	var outObj = {
-		data: mydataset,
+	return {
+		data: new Set(inObj.data.map(x => x.id)),
 		token: inObj.token
-	}
-	return outObj;
+	};
 }
 
 app.get('/callback', mainCallback);
 
 function mainCallback(req, res) {
-	console.log("mainCallback");
-
 	var tokenrequest = getInitialTokens(req, res);
 
 	var loc;
 
 	tokenrequest
-	.then(toks => {
-		loc = database.ref().push();
-		loc.child('tokens').set(toks);
-		var locref = loc.toString();
-		locref = locref.split('/');
-		locref = locref[locref.length - 1];
-		res.cookie(stateKey, locref);
-	});
+		.then(toks => {
+			loc = database.ref().push();
+			loc.child('tokens').set(toks);
+			var locref = loc.toString();
+			locref = locref.split('/');
+			locref = locref[locref.length - 1];
+			res.cookie(stateKey, locref);
+		})
+		.catch(error => {
+			res.send('Internal Server Error');
+			throw error;
+		});
 
 	tokenrequest
-	.then(getMyData)
-	.then(combineArrays)
-	.then(getUniqueIds)
-	.then(obj => {
-		console.log("done");
-		// console.log(obj.data);
-		console.log(obj.data.size);
+		.then(getMyData)
+		.then(combineArrays)
+		.then(getUniqueIds)
+		.then(obj => {
+			var arr = [...obj.data];
 
-		var arr = [...obj.data];
-
-		loc.child('mysongdata')
-		.set(arr, () => {
-			res.redirect('/friends.html');
+			loc.child('mysongdata')
+				.set(arr)
+				.then(() => {
+					res.redirect('/friends.html');
+				})
+				.catch(error => {
+					res.send('Internal Server Error');
+					throw error;
+				});
+		})
+		.catch(error => {
+			res.send('Internal Server Error');
+			throw error;
 		});
-	})
-	.catch(error => {
-		console.error("Error somewhere in main callback");
-		console.log(error);
-	});
-}
-
-function getInitialTokens(req, res) {
-	console.log("getInitialTokens");
-	var code = req.query.code || null;
-	var state = req.query.state || null;
-	var storedState = req.cookies ? req.cookies[stateKey] : null;
-
-	if (state === null || state !== storedState) {
-		throw new Error("state does not match storedState");
-		res.redirect('/#' +
-			querystring.stringify({
-				error: 'state_mismatch'
-			}));
-	} else {
-		res.clearCookie(stateKey);
-		let authOptions = {
-			method: 'POST',
-			url: 'https://accounts.spotify.com/api/token',
-			form: {
-				code: code,
-				redirect_uri: redirect_uri,
-				grant_type: 'authorization_code'
-			},
-			headers: {
-				'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
-			},
-			json: true
-		};
-
-		return new Promise ((resolve, reject) => {
-			rp(authOptions)
-			.then(body => {
-				var access_token = body.access_token,
-				refresh_token = body.refresh_token;
-
-				// res.redirect('/#' +
-				// 	querystring.stringify({
-				// 		access_token: access_token,
-				// 		refresh_token: refresh_token
-				// 	}));
-				var toks = [access_token, refresh_token];
-				
-				resolve(toks);
-			})
-			.catch(error => {
-				console.error("Error obtaining access token from refresh token");
-
-				res.redirect('/#' +
-					querystring.stringify({
-						error: 'invalid_token'
-					}));
-				reject(error);
-			});
-		});
-	}
 }
 
 function getMyData (toks) {
-	console.log("getMyData");
-	var savedtrackspromise = savedTracks(toks[0]);
-	var playlisttrackspromise = playlistTracks(toks[0]);
+	var savedtrackspromise = getTotalSavedTracks(toks[0])
+		.then(getSavedTrackObjects);
 
-	return new Promise((resolve, reject) => {
-		Promise.all([savedtrackspromise, playlisttrackspromise])
+	var playlisttrackspromise = getTotalPlaylists(toks[0], 'me')
+		.then(getPlaylistObjects)
+		.then(getTotalPlaylistTrackObjects);
+
+	return Promise.all([savedtrackspromise, playlisttrackspromise])
 		.then(results => {
-			console.log("yay we done");
-			var outObj = {
+			return {
 				data: results,
 				token: toks[0]
-			}
-			resolve(outObj);
-		})
-		.catch(error => {
-			console.error("Error in getMyData");
-			resolve(error);
-		})
-	});
-}
-
-function savedTracks(token) {
-	console.log("savedTracks");
-	return new Promise((resolve, reject) => {
-		getTotalSavedTracks(token)
-		.then(getSavedTrackObjects)
-		.then(arr => {
-			resolve(arr);
-		})
-		.catch(error => {
-			console.error("Error in savedTracks");
-			reject(error);
-		})
-	})
+			};
+		});
 }
 
 function getTotalSavedTracks(token) {
-	console.log("getTotalSavedTracks");
 	var options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/tracks?',
@@ -727,72 +463,26 @@ function getTotalSavedTracks(token) {
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
+	return rp(options)
 		.then(body => {
-			console.log('Total saved tracks received');
-			var outObj = {
+			return {
 				totalsongs: body.total,
 				token: token
-			}
-			resolve(outObj);
-		})
-		.catch(error => {
-			console.error("Error in getTotalSavedTracks");
-			reject(error);
+			};
 		});
-	});
 }
 
 function getSavedTrackObjects(inObj) {
-	console.log("getSavedTrackObjects");
 	var token = inObj.token;
 	var totalnum = inObj.totalsongs;
 
-	var objArray = [];
-	var promiseArr = [];
+	var outObj = loopingRequest(trackObjectRequest, token, totalnum);
 
-	var prevoffset = -50;
-	var numtimes = Math.ceil(totalnum/50);
-
-
-	for (let i = 0; i < numtimes; i++) {
-		let paramobj = {
-			limit: 50,
-			offset: prevoffset + 50
-		}; 
-		let params = querystring.stringify(paramobj);
-		prevoffset = paramobj.offset;
-
-		currentprom = new Promise((resolve, reject) => {
-			trackObjectRequest(token, params)
-			.then(arr => {
-				objArray.push(...arr);
-				resolve("resolved");
-			})
-			.catch(error => {
-				console.error("Error in loop of getSavedTrackObjects");
-				reject(error);
-			});
-		});
-
-		promiseArr.push(currentprom);
-	}
-
-	return new Promise((resolve, reject) => {
-		Promise.all(promiseArr)
-			.then(() => {
-				resolve(objArray);
-			})
-			.catch(error => {
-				console.error("Error in getSavedTrackObjects");
-				reject(error);
-			});
-	});
+	return Promise.all(outObj.promisearray)
+		.then(() => outObj.objectarray);
 }
 
 function trackObjectRequest(token, params) {
-	console.log("trackObjectRequest");
 	var options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/tracks?' + params + '',
@@ -800,40 +490,11 @@ function trackObjectRequest(token, params) {
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
-			.then(body => {
-				var resultarr = body.items;
-				var newarr = [];
-				for (let i = 0; i < resultarr.length; i++) {
-					newarr.push(resultarr[i].track);
-				}
-				resolve(newarr);
-			})
-			.catch(error => {
-				console.error("Error in trackObjectRequest");
-				reject(error);
-			});
-	});
-}
-
-function playlistTracks(token) {
-	return new Promise((resolve, reject) => {
-		getTotalPlaylists(token, 'me')
-		.then(getPlaylistObjects)
-		.then(getTotalPlaylistTrackObjects)
-		.then(arr => {
-			resolve(arr);
-		})
-		.catch(error => {
-			console.error("Error in playlistTracks");
-			reject(error);
-		});
-	})
+	return rp(options)
+		.then(body => body.items.map(x => x.track));
 }
 
 function getTotalPlaylistTrackObjects(inObj) {
-	console.log("getTotalPlaylistTrackObjects");
 	var token = inObj.token;
 	var data = inObj.data;
 
@@ -847,82 +508,28 @@ function getTotalPlaylistTrackObjects(inObj) {
 			id: data[i].href
 		};
 
-		prom = new Promise((resolve, reject) => {
-			getObjectsFromPlaylist(obj)
-			.then(arr => {
-				objArray.push(...arr);
-				resolve("resolved");
-			})
-			.catch(error => {
-				console.error("Error in loop of getTotalPlaylistTrackObjects");
-				reject(error);
-			});
-		});
+		let prom = getObjectsFromPlaylist(obj)
+			.then(arr => objArray.push(...arr));
 
 		promiseArr.push(prom);
 	}
 
-	return new Promise((resolve, reject) => {
-		Promise.all(promiseArr)
-		.then(() => {
-			resolve(objArray);
-		})
-		.catch(error => {
-			console.error("Error in getTotalPlaylistTrackObjects");
-			reject(error);
-		})
-	});
+	return Promise.all(promiseArr)
+		.then(() => objArray);
 }
 
 function getObjectsFromPlaylist(inObj) {
-	console.log("getObjectsFromPlaylist");
 	var token = inObj.token;
 	var totalplaylisttracks = inObj.totalplaylisttracks;
 	var id = inObj.id;
 
-	var objArray = [];
-	var promiseArr = [];
+	var outObj = loopingRequest(playlistTrackObjectRequest, token, totalplaylisttracks, id);
 
-	var prevoffset = -50;
-	var numtimes = Math.ceil(totalplaylisttracks/50);
-
-	for (let i = 0; i < numtimes; i++) {
-		let paramobj = {
-			limit: 50,
-			offset: prevoffset + 50
-		}; 
-		let params = querystring.stringify(paramobj);
-		prevoffset = paramobj.offset;
-
-		currentprom = new Promise((resolve, reject) => {
-			playlistTrackObjectRequest(token, params, id)
-			.then(arr => {
-				objArray.push(...arr);
-				resolve("resolved");
-			})
-			.catch(error => {
-				console.error("Error in loop of getObjectsFromPlaylist");
-				reject(error);
-			});
-		});
-
-		promiseArr.push(currentprom);
-	}
-
-	return new Promise((resolve, reject) => {
-		Promise.all(promiseArr)
-			.then(() => {
-				resolve(objArray);
-			})
-			.catch(error => {
-				console.error("Error in getObjectsFromPlaylist");
-				reject(error);
-			});
-	});
+	return Promise.all(outObj.promisearray)
+		.then(() => outObj.objectarray);
 }
 
 function playlistTrackObjectRequest(token, params, href) {
-	console.log("playlistTrackObjectRequest");
 	var options = {
 		method: 'GET',
 		url: href + '?' + params,
@@ -930,55 +537,39 @@ function playlistTrackObjectRequest(token, params, href) {
 		json: true
 	};
 
-	return new Promise ((resolve, reject) => {
-		rp(options)
-			.then(body => {
-				var resultarr = body.items;
-				var newarr = [];
-				for (let i = 0; i < resultarr.length; i++) {
-					newarr.push(resultarr[i].track);
-				}
-				resolve(newarr);
-			})
-			.catch(error => {
-				console.error("Error in playlistObjectRequest");
-				reject(error);
-			});
-	});
+	return rp(options)
+		.then(body => body.items.map(x => x.track));
 }
 
 function combineArrays(arr) {
 	var newarr = arr.data[0];
 	newarr.push(...arr.data[1]);
-	var outObj = {
+	return {
 		data: newarr,
 		token: arr.token
 	};
-	return outObj;
 }
 
-function getFriendInitialTokens(req, res) {
-	console.log("getFriendInitialTokens");
+function getInitialTokens(req, res) {
 	var code = req.query.code || null;
 	var state = req.query.state || null;
 	var storedState = req.cookies ? req.cookies[stateKey] : null;
 	storedState = JSON.parse(storedState);
+	var uri = storedState.redir;
 	storedState = storedState.state;
 
 	if (state === null || state !== storedState) {
-		throw new Error("state does not match storedState");
-		res.redirect('/#' +
-			querystring.stringify({
-				error: 'state_mismatch'
-			}));
-	} else {
+		res.send('Internal Server Error');
+		throw new Error('state does not match storedState');
+	}
+	else {
 		res.clearCookie(stateKey);
 		let authOptions = {
 			method: 'POST',
 			url: 'https://accounts.spotify.com/api/token',
 			form: {
 				code: code,
-				redirect_uri: 'https://our-music-on-spotify.firebaseapp.com/finish/',
+				redirect_uri: uri,
 				grant_type: 'authorization_code'
 			},
 			headers: {
@@ -987,52 +578,10 @@ function getFriendInitialTokens(req, res) {
 			json: true
 		};
 
-		return new Promise ((resolve, reject) => {
-			rp(authOptions)
-			.then(body => {
-				var access_token = body.access_token,
-				refresh_token = body.refresh_token;
-
-				var toks = [access_token, refresh_token];
-				
-				resolve(toks);
-			})
-			.catch(error => {
-				console.error("Error obtaining access token from refresh token");
-
-				res.redirect('/#' +
-					querystring.stringify({
-						error: 'invalid_token'
-					}));
-				reject(error);
-			});
-		});
+		return rp(authOptions)
+			.then(body => [body.access_token, body.refresh_token]);
 	}
 }
-
-app.get('/refresh_token', function(req, res) {
-
-  // requesting access token from refresh token
-  var refresh_token = req.query.refresh_token;
-  var authOptions = {
-	url: 'https://accounts.spotify.com/api/token',
-	headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
-	form: {
-	  grant_type: 'refresh_token',
-	  refresh_token: refresh_token
-	},
-	json: true
-  };
-
-  request.post(authOptions, function(error, response, body) {
-	if (!error && response.statusCode === 200) {
-	  var access_token = body.access_token;
-	  res.send({
-		'access_token': access_token
-	  });
-	}
-  });
-});
 
 app.listen(8889, () => {
 	console.log('Listening on 8889');
@@ -1043,7 +592,7 @@ app.listen(8889, () => {
  * @param  {number} length The length of the string
  * @return {string} The generated string
  */
- var generateRandomString = function(length) {
+function generateRandomString(length) {
 	var text = '';
 	var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -1051,6 +600,33 @@ app.listen(8889, () => {
 		text += possible.charAt(Math.floor(Math.random() * possible.length));
 	}
 	return text;
- };
+}
+
+function loopingRequest(requester, token, total, other) {
+	var objArray = [];
+	var promiseArr = [];
+
+	var prevoffset = -50;
+	var numtimes = Math.ceil(total/50);
+
+	for (let i = 0; i < numtimes; i++) {
+		let paramobj = {
+			limit: 50,
+			offset: prevoffset + 50
+		}; 
+		let params = querystring.stringify(paramobj);
+		prevoffset = paramobj.offset;
+
+		let currentprom = requester(token, params, other)
+			.then(arr => objArray.push(...arr));
+
+		promiseArr.push(currentprom);
+	}
+
+	return {
+		promisearray: promiseArr,
+		objectarray: objArray
+	};
+}
 
 exports.app = functions.https.onRequest(app);

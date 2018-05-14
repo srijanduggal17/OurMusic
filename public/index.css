@@ -1,18 +1,17 @@
 @import url('https://fonts.googleapis.com/css?family=Montserrat|Roboto+Mono');
 
-
-
-
 * {
 	font-family: 'Montserrat', sans-serif;
 }
 
 html {
 	height: 100%;
+	width: 100%
 }
 
 body {
 	height: 100%;
+	width: 100%;
 	margin: 0px;
 	display: grid;
 	grid-template-columns: 1fr 2fr 1fr;
@@ -23,13 +22,26 @@ body {
 	background: black;
 }
 
+p {
+	color: #9ea8ba;
+	font-size: 1.5em;
+}
+
+h1 {
+	color: white;
+	font-size: 3em;
+	font-family: 'Roboto Mono', monospace;
+}
+
 #maindiv {
+	justify-self: center;
+	align-self: center;
 	grid-area: middle;
 	text-align: center;
-	border-left: 2px gray solid;
-	border-right: 2px gray solid;
+	border: none;
 	padding-left: 2%;
 	padding-right: 2%;
+	margin: none;
 }
 
 .btn {
@@ -46,16 +58,26 @@ body {
 .btn:hover {
 	background-color: #5ac263; 
 	color: white;
-	padding: 3% 7.5%;
+	padding: 2% 7.5%;
 }
 
-p {
-	color: #9ea8ba;
-	font-size: 2em;
+.btn:focus {
+	outline: none;
 }
 
-h1 {
-	color: white;
-	font-size: 3em;
-	font-family: 'Roboto Mono', monospace;
+@media only screen and (min-width: 426px) {
+	body {
+		grid-template-columns: 0fr 4fr 0fr;
+	}
+
+	#maindiv {
+		border-left: 2px gray solid;
+		border-right: 2px gray solid;
+	}
+}
+
+@media only screen and (min-width: 1200px) {
+	p {
+		font-size: 2em;
+	}
 }
