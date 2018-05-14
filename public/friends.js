@@ -8,8 +8,20 @@ userinput.addEventListener('input', greyClass);
 document.getElementById('logbtn').addEventListener('click', verifyLogin);
 
 function verifyLogin() {
-	document.getElementById('maindiv').style.display = 'none';
-	document.getElementById('continuation').style.display = 'grid';
+	var valid = true;
+
+	if (playinput.value == '') {
+		valid = false;
+		playinput.classList.add('wrong');
+	}
+	else {
+		playinput.classList.remove('wrong');
+	}
+
+	if (valid) {
+		document.getElementById('maindiv').style.display = 'none';
+		document.getElementById('continuation').style.display = 'grid';
+	}
 }
 
 function greyClass() {
@@ -39,6 +51,7 @@ function submitFunc(formtype) {
 
 	if (valid) {
 		document.getElementById('maindiv').style.display = 'none';
+		document.getElementById('continuation').style.display = 'none';
 		document.getElementById('loading').style.display = 'grid';
 		addPlaylistName(formtype);
 		addDatabaseCookie(formtype);

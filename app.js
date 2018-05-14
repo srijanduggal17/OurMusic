@@ -230,6 +230,7 @@ function makeEndpoint(name, username, token, data, collab) {
 	var reqbod = {
 		name: name,
 	};
+	
 	if (collab) {
 		reqbod.public = false;
 		reqbod.collaborative = true;
