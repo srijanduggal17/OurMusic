@@ -9,18 +9,18 @@ var rp = require('request-promise');
 var stateKey = '__session';
 var app = express();
 
-var client_id = '15ec5ccbf8d648378ecefdf8bab3f58d'; // Your client id
-var client_secret = 'a40cc81bc12a4ea0adcb04a8638bd1f2'; // Your secret
+var client_id = ''; // Your client id
+var client_secret = ''; // Your secret
 var redirect_uri = 'http://localhost:8889/callback/'; // Your redirect uri
 
 var firebase = require("firebase");
 var config = {
-	apiKey: "AIzaSyCz4s7QchGpEoqEbXsHCrlZYcnkIcdFD08",
+	apiKey: "",
 	authDomain: "our-music-on-spotify.firebaseapp.com",
 	databaseURL: "https://our-music-on-spotify.firebaseio.com",
 	projectId: "our-music-on-spotify",
 	storageBucket: "our-music-on-spotify.appspot.com",
-	messagingSenderId: "1134077370"
+	messagingSenderId: ""
 };
 firebase.initializeApp(config);
 var database = firebase.database();
