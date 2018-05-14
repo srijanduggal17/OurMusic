@@ -1,14 +1,40 @@
+const playinput = document.getElementById('playnameinput');
+const userinput = document.getElementById('username');
+const publicform = document.getElementById('friendpublicform');
+const loginform = document.getElementById('friendloginform');
+
+playinput.addEventListener('input', greyClass);
+userinput.addEventListener('input', greyClass);
+document.getElementById('logbtn').addEventListener('click', verifyLogin);
+
+function verifyLogin() {
+	document.getElementById('maindiv').style.display = 'none';
+	document.getElementById('continuation').style.display = 'grid';
+}
+
+function greyClass() {
+	this.classList.remove('wrong');
+}
+
 function submitFunc(formtype) {
 	var valid = true;
 
-	if (document.getElementById('playnameinput').value == '') {
+	if (playinput.value == '') {
 		valid = false;
-		console.log('no playlist name');
+		playinput.classList.add('wrong');
+	}
+	else {
+		playinput.classList.remove('wrong');
 	}
 
-	if ((formtype === 'public') && document.getElementById('username').value == '') {
-		valid = false;
-		console.log('no username');
+	if (formtype === 'public') {
+		if (userinput.value == '') {
+			valid = false;
+			userinput.classList.add('wrong');
+		}
+		else {
+			userinput.classList.remove('wrong');
+		}
 	}
 
 	if (valid) {
@@ -23,11 +49,11 @@ function submitFunc(formtype) {
 
 function addPlaylistName(formtype) {
 	if (formtype === 'public') {
-		document.getElementById('friendpublicform').appendChild(document.getElementById('playnameinput'));
+		publicform.appendChild(playinput);
 	}
 
 	else if (formtype === 'login') {
-		document.getElementById('friendloginform').appendChild(document.getElementById('playnameinput'));
+		loginform.appendChild(playinput);
 	}
 }
 
@@ -43,10 +69,10 @@ function addDatabaseCookie(formtype) {
 	newelem.value = databaseref;
 
 	if (formtype === 'public') {
-		document.getElementById('friendpublicform').appendChild(newelem);
+		publicform.appendChild(newelem);
 	}
 
 	else if (formtype === 'login') {
-		document.getElementById('friendloginform').appendChild(newelem);
+		loginform.appendChild(newelem);
 	}
 }

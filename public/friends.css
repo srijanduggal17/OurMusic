@@ -64,17 +64,27 @@ h3 {
 	grid-template-columns: 1fr;
 }
 
+#continuation {
+	display: none;
+	height: 100%;
+	grid-template-rows: 1fr;
+	grid-template-columns: 1fr;
+}
+
+#continuation div {
+	text-align: center;
+	place-self: center;
+}
+
 #loadmessage {
 	text-align: center;
-	justify-self: center;
-	align-self: center;
+	place-self: center;
 }
 
 #playlistdiv {
 	grid-area: playlist;
 	text-align: center;
-	align-self: center;
-	justify-self: center;
+	place-self: center;
 }
 
 #heading {
@@ -90,8 +100,7 @@ h3 {
 #orsection {
 	grid-area: orsection;
 	text-align: center;
-	align-self: center;
-	justify-self: center;
+	place-self: center;
 	color: grey;
 }
 
@@ -115,7 +124,7 @@ h3 {
 	align-self: center;
 }
 
-#rightbtn {
+#logbtn {
 	grid-area: rightbutton;
 	justify-self: center;
 	align-self: center;
@@ -141,6 +150,14 @@ h3 {
 	color: white; 
 }
 
+.wrong {
+	border-color: #dd0000;
+}
+
+.wrong::placeholder {
+	color: #dd0000;
+}
+
 @media only screen and (min-width: 600px) {
 	#maindiv {
 		grid-template-columns: .1fr 1fr .2fr 1fr .1fr;
@@ -157,7 +174,7 @@ h3 {
 		border: none;
 	}
 	
-	#rightbtn {
+	#logbtn {
 		align-self: start;
 	}
 	

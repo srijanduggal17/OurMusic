@@ -28,10 +28,19 @@
 			<form id="friendloginform" method="post" action="/friendlogin" onsubmit="return submitFunc('login')">
 			</form>
 		</div>
-		
-		<input form="friendloginform" id="rightbtn" class="btn" type="submit" value="Log in with Spotify">
+
+		<button id="logbtn" class="btn">Log in with Spotify</button>
 		
 		<p id="orsection">OR</p>
+	</div>
+
+	<div id="continuation">
+		<div>
+			<h2>To log your friend in:</h2>
+			<p>When you reach the Spotify page, click on "Not you?"</p>
+			<p>If it says your credentials are invalid, refresh the page</p>
+			<input form="friendloginform" id="rightbtn" class="btn" type="submit" value="Continue to Spotify">
+		</div>
 	</div>
 
 	<div id="loading">
