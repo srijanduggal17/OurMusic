@@ -21,18 +21,18 @@ const rp = require('request-promise');
 const stateKey = '__session';
 const app = express();
 
-const client_id = '15ec5ccbf8d648378ecefdf8bab3f58d';
-const client_secret = 'a40cc81bc12a4ea0adcb04a8638bd1f2';
-const redirect_uri = 'http://localhost:8889/callback/';
+const client_id = '';
+const client_secret = '';
+const redirect_uri = '';
 
 const firebase = require('firebase');
 const config = {
-	apiKey: 'AIzaSyCz4s7QchGpEoqEbXsHCrlZYcnkIcdFD08',
-	authDomain: 'our-music-on-spotify.firebaseapp.com',
-	databaseURL: 'https://our-music-on-spotify.firebaseio.com',
-	projectId: 'our-music-on-spotify',
-	storageBucket: 'our-music-on-spotify.appspot.com',
-	messagingSenderId: '1134077370'
+	apiKey: '',
+	authDomain: '',
+	databaseURL: '',
+	projectId: '',
+	storageBucket: '',
+	messagingSenderId: ''
 };
 firebase.initializeApp(config);
 const database = firebase.database();
@@ -878,3 +878,4 @@ app.get('/completion', clearDatabaseReference);
 app.listen(8889, () => {
 	console.log('Listening on 8889');
 });
+

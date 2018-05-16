@@ -9,9 +9,9 @@ const rp = require('request-promise');
 const stateKey = '__session';
 const app = express();
 
-const client_id = '15ec5ccbf8d648378ecefdf8bab3f58d';
-const client_secret = 'a40cc81bc12a4ea0adcb04a8638bd1f2';
-const redirect_uri = 'https://our-music-on-spotify.firebaseapp.com/callback/';
+var client_id = ''; // Your client id
+var client_secret = ''; // Your secret
+var redirect_uri = ''; // Your redirect uri
 
 const admin = require('firebase-admin');
 const config = functions.config().firebase;
