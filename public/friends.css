@@ -33,6 +33,10 @@ input:focus {
 	outline: none;
 }
 
+button:focus {
+	outline: none;
+}
+
 h2 {
 	color: #4CAF50;
 }
@@ -41,7 +45,7 @@ h3 {
 	font-family: 'Roboto Mono', monospace;
 }
 
-#maindiv {
+#main {
 	height: 100%;
 	display: grid;
 	grid-template-columns: .5fr 4fr .5fr;
@@ -50,10 +54,10 @@ h3 {
 						 "leftside playlist rightside"
 						 "leftside header rightside"
 						 "leftside public rightside"
-						 "leftside leftbutton rightside"
-						 "leftside orsection rightside"
-						 "leftside login rightside"
-						 "leftside rightbutton rightside"
+						 "leftside publicButton rightside"
+						 "leftside orSection rightside"
+						 "leftside loginButton rightside"
+						 "leftside rightButton rightside"
 						 "leftside bottom rightside";
 }
 
@@ -76,12 +80,12 @@ h3 {
 	place-self: center;
 }
 
-#loadmessage {
+#loadMessage {
 	text-align: center;
 	place-self: center;
 }
 
-#playlistdiv {
+#playlist {
 	grid-area: playlist;
 	text-align: center;
 	place-self: center;
@@ -97,14 +101,14 @@ h3 {
 	padding-right: 2%;
 }
 
-#orsection {
-	grid-area: orsection;
+#orSection {
+	grid-area: orSection;
 	text-align: center;
 	place-self: center;
 	color: grey;
 }
 
-#frienddiv {
+#friend {
 	grid-area: public;
 	justify-self: center;
 	align-self: start;
@@ -118,14 +122,14 @@ h3 {
 	text-align: center;
 }
 
-#leftbtn {
-	grid-area: leftbutton;
+#publicSubmit {
+	grid-area: publicButton;
 	justify-self: center;
 	align-self: center;
 }
 
-#logbtn {
-	grid-area: rightbutton;
+#loginButton {
+	grid-area: loginButton;
 	justify-self: center;
 	align-self: center;
 }
@@ -159,14 +163,14 @@ h3 {
 }
 
 @media only screen and (min-width: 600px) {
-	#maindiv {
+	#main {
 		grid-template-columns: .1fr 1fr .2fr 1fr .1fr;
 		grid-template-rows: 1fr 1fr 1fr 1fr 1fr 1fr;
 		grid-template-areas: "leftside top top top rightside"
 							 "leftside playlist playlist playlist rightside"
 							 "leftside header header header rightside"
-							 "leftside public orsection login rightside"
-							 "leftside leftbutton nothing rightbutton rightside"
+							 "leftside public orSection login rightside"
+							 "leftside publicButton nothing loginButton rightside"
 							 "leftside bottom bottom bottom rightside";
 	}
 
@@ -174,23 +178,23 @@ h3 {
 		border: none;
 	}
 	
-	#logbtn {
+	#loginButton {
 		align-self: start;
 	}
 	
-	#leftbtn {
+	#publicSubmit {
 		align-self: start;
 	}
 }
 
 @media only screen and (min-width: 768px) {
-	#maindiv {
+	#main {
 		grid-template-columns: .3fr 1fr .2fr 1fr .3fr;
 	}
 }
 
 @media only screen and (min-width: 1024px) {
-	#maindiv {
+	#main {
 		grid-template-columns: 1fr 1fr .2fr 1fr 1fr;
 	}
 }
