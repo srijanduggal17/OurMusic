@@ -6,32 +6,32 @@
 	<link rel="stylesheet" type="text/css" href="friends.css">
 </head>
 <body>
-	<div id="maindiv">
-		<div id="playlistdiv">
+	<div id="main">
+		<div id="playlist">
 			<h3>Enter a playlist name below</h3>
-			<input id="playnameinput" autocomplete="off" name="playname" type="text" placeholder="type here">
+			<input id="playlistInput" autocomplete="off" name="playlistName" type="text" placeholder="type here">
 		</div>
 
 		<h2 id="heading">Connect to your friend's account</h2>
 
-		<div id="frienddiv">
+		<div id="friend">
 			<h3>Access their public tracks</h3>
-			<form id="friendpublicform" method="post" action="/friendpublic" onsubmit="return submitFunc('public')">
-				<input id="username" autocomplete="off" type="text" name="username" placeholder="enter username">
+			<form id="friendPublic" method="post" action="/friendpublic" onsubmit="return submitFunc('public')">
+				<input id="usernameInput" autocomplete="off" type="text" name="username" placeholder="enter username">
 			</form>
 		</div>
 
-		<input form="friendpublicform" id="leftbtn" class="btn" type="submit">
+		<input form="friendPublic" id="publicSubmit" class="btn" type="submit">
 		
 		<div id="login">
 			<h3>Log them in to access all their songs</h3>
-			<form id="friendloginform" method="post" action="/friendlogin" onsubmit="return submitFunc('login')">
+			<form id="friendLogin" method="post" action="/friendlogin" onsubmit="return submitFunc('login')">
 			</form>
 		</div>
 
-		<button id="logbtn" class="btn">Log in with Spotify</button>
+		<button id="loginButton" class="btn">Log in with Spotify</button>
 		
-		<p id="orsection">OR</p>
+		<p id="orSection">OR</p>
 	</div>
 
 	<div id="continuation">
@@ -39,12 +39,12 @@
 			<h2>To log your friend in:</h2>
 			<p>When you reach the Spotify page, click on "Not you?"</p>
 			<p>If it says your credentials are invalid, refresh the page</p>
-			<input form="friendloginform" id="rightbtn" class="btn" type="submit" value="Continue to Spotify">
+			<input form="friendLogin" class="btn" type="submit" value="Continue to Spotify">
 		</div>
 	</div>
 
 	<div id="loading">
-		<p id="loadmessage">Loading</p>
+		<p id="loadMessage">Loading</p>
 	</div>
 
 	<script type="text/javascript" src="friends.js"></script>

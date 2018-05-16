@@ -1,25 +1,25 @@
-const playinput = document.getElementById('playnameinput');
-const userinput = document.getElementById('username');
-const publicform = document.getElementById('friendpublicform');
-const loginform = document.getElementById('friendloginform');
+const playlistInput = document.getElementById('playlistInput');
+const usernameInput = document.getElementById('usernameInput');
+const publicForm = document.getElementById('friendPublic');
+const loginForm = document.getElementById('friendLogin');
 
-playinput.addEventListener('input', greyClass);
-userinput.addEventListener('input', greyClass);
-document.getElementById('logbtn').addEventListener('click', verifyLogin);
+playlistInput.addEventListener('input', greyClass);
+usernameInput.addEventListener('input', greyClass);
+document.getElementById('loginButton').addEventListener('click', verifyLogin);
 
 function verifyLogin() {
 	var valid = true;
 
-	if (playinput.value == '') {
+	if (playlistInput.value == '') {
 		valid = false;
-		playinput.classList.add('wrong');
+		playlistInput.classList.add('wrong');
 	}
 	else {
-		playinput.classList.remove('wrong');
+		playlistInput.classList.remove('wrong');
 	}
 
 	if (valid) {
-		document.getElementById('maindiv').style.display = 'none';
+		document.getElementById('main').style.display = 'none';
 		document.getElementById('continuation').style.display = 'grid';
 	}
 }
@@ -31,30 +31,30 @@ function greyClass() {
 function submitFunc(formtype) {
 	var valid = true;
 
-	if (playinput.value == '') {
+	if (playlistInput.value == '') {
 		valid = false;
-		playinput.classList.add('wrong');
+		playlistInput.classList.add('wrong');
 	}
 	else {
-		playinput.classList.remove('wrong');
+		playlistInput.classList.remove('wrong');
 	}
 
 	if (formtype === 'public') {
-		if (userinput.value == '') {
+		if (usernameInput.value == '') {
 			valid = false;
-			userinput.classList.add('wrong');
+			usernameInput.classList.add('wrong');
 		}
 		else {
-			userinput.classList.remove('wrong');
+			usernameInput.classList.remove('wrong');
 		}
 	}
 
 	if (valid) {
-		document.getElementById('maindiv').style.display = 'none';
+		document.getElementById('main').style.display = 'none';
 		document.getElementById('continuation').style.display = 'none';
 		document.getElementById('loading').style.display = 'grid';
 		addPlaylistName(formtype);
-		addDatabaseCookie(formtype);
+		addDatabaseToForm(formtype);
 	}
 
 	return valid;
@@ -62,30 +62,30 @@ function submitFunc(formtype) {
 
 function addPlaylistName(formtype) {
 	if (formtype === 'public') {
-		publicform.appendChild(playinput);
+		publicForm.appendChild(playlistInput);
 	}
 
 	else if (formtype === 'login') {
-		loginform.appendChild(playinput);
+		loginForm.appendChild(playlistInput);
 	}
 }
 
-function addDatabaseCookie(formtype) {
-	var cookiesarr = document.cookie.split(';');
-	cookiesarr = cookiesarr.filter(x => x.includes('__session='));
-	var databasecookie = cookiesarr[0].split('=');
-	var databaseref = databasecookie[1];
+function addDatabaseToForm(formtype) {
+	var cookiesArray = document.cookie.split(';');
+	cookiesArray = cookiesArray.filter(x => x.includes('__session='));
+	var databaseCookie = cookiesArray[0].split('=');
+	var databaseRef = databaseCookie[1];
 
-	var newelem = document.createElement('input');
-	newelem.type = 'text';
-	newelem.name = 'databaseref';
-	newelem.value = databaseref;
+	var databaseInput = document.createElement('input');
+	databaseInput.type = 'text';
+	databaseInput.name = 'databaseRef';
+	databaseInput.value = databaseRef;
 
 	if (formtype === 'public') {
-		publicform.appendChild(newelem);
+		publicForm.appendChild(databaseInput);
 	}
 
 	else if (formtype === 'login') {
-		loginform.appendChild(newelem);
+		loginForm.appendChild(databaseInput);
 	}
 }

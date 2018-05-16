@@ -21,6 +21,16 @@
         "semi": [
             "error",
             "always"
-        ]
+        ],
+        "valid-jsdoc": ["error", { "matchDescription": ".+" }],
+        "require-jsdoc": ["error", {
+            "require": {
+                "FunctionDeclaration": true,
+                "MethodDefinition": false,
+                "ClassDeclaration": false,
+                "ArrowFunctionExpression": true,
+                "FunctionExpression": false
+            }
+        }]
     }
 }

@@ -33,9 +33,8 @@ h1 {
 	font-family: 'Roboto Mono', monospace;
 }
 
-#maindiv {
-	justify-self: center;
-	align-self: center;
+#main {
+	place-self: center;
 	grid-area: middle;
 	text-align: center;
 	border: none;
@@ -70,7 +69,7 @@ h1 {
 		grid-template-columns: 0fr 4fr 0fr;
 	}
 
-	#maindiv {
+	#main {
 		border-left: 2px gray solid;
 		border-right: 2px gray solid;
 	}

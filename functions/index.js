@@ -1,13 +1,13 @@
 const functions = require('firebase-functions');
 
-var express = require('express'); 
-var querystring = require('querystring');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var rp = require('request-promise');
+const express = require('express'); 
+const querystring = require('querystring');
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const rp = require('request-promise');
 
-var stateKey = '__session';
-var app = express();
+const stateKey = '__session';
+const app = express();
 
 var client_id = ''; // Your client id
 var client_secret = ''; // Your secret
@@ -16,15 +16,17 @@ var redirect_uri = ''; // Your redirect uri
 const admin = require('firebase-admin');
 const config = functions.config().firebase;
 admin.initializeApp(config);
-var database = admin.database();
+const database = admin.database();
 
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+var scope = 'user-library-read playlist-modify-public playlist-modify-private';
+
 app.get('/login', postLogin);
 
 function postLogin(req, res) {
-	var state = generateRandomString(16);
+	const state = generateRandomString(16);
 	var cooks = {
 		state: state,
 		redir: 'https://our-music-on-spotify.firebaseapp.com/callback/'
@@ -32,22 +34,21 @@ function postLogin(req, res) {
 	res.setHeader('Cache-Control', 'private');
 	res.cookie(stateKey, JSON.stringify(cooks));
 
-	var scope = 'user-library-read playlist-modify-public playlist-modify-private';
-	res.redirect('https://accounts.spotify.com/authorize?' +
-	querystring.stringify({
+	const request = querystring.stringify({
 		response_type: 'code',
 		client_id: client_id,
 		scope: scope,
 		redirect_uri: redirect_uri,
 		state: state,
 		show_dialog: true
-	}));
+	});
+	res.redirect(`https://accounts.spotify.com/authorize?${request}`);
 }
 
 app.post('/friendlogin', friendLogin);
 
 function friendLogin(req, res) {
-	var state = generateRandomString(16);
+	const state = generateRandomString(16);
 	var cooks = {
 		state: state,
 		playname: req.body.playname,
@@ -58,17 +59,16 @@ function friendLogin(req, res) {
 	res.setHeader('Cache-Control', 'private');
 	res.cookie(stateKey, JSON.stringify(cooks));
 
-	var scope = 'user-library-read playlist-modify-public playlist-modify-private';
-
-	res.redirect('https://accounts.spotify.com/authorize?' +
-	querystring.stringify({
+	const request = querystring.stringify({
 		response_type: 'code',
 		client_id: client_id,
 		scope: scope,
 		redirect_uri: 'https://our-music-on-spotify.firebaseapp.com/finish/',
 		state: state,
 		show_dialog: true
-	}));
+	});
+
+	res.redirect(`https://accounts.spotify.com/authorize?${request}`);
 }
 
 app.get('/finish', friendMainCallback);
@@ -115,7 +115,7 @@ function secondCallback(req, res) {
 	var playname = req.body.playname;
 	var databaseref = req.body.databaseref;
 
-	database.ref(databaseref + '/tokens')
+	database.ref(`${databaseref}/tokens`)
 		.once('value')
 		.then(data => {
 			var toks = data.val();
@@ -154,7 +154,7 @@ function secondCallback(req, res) {
 app.get('/completion', completionFunc);
 
 function completionFunc(req, res) {
-	var incookie = JSON.parse(req.cookies[stateKey]);
+	const incookie = JSON.parse(req.cookies[stateKey]);
 	database.ref(incookie.databaseref).remove()
 		.then(() => {
 			res.clearCookie(stateKey);
@@ -172,11 +172,11 @@ function followPlaylist(inObj) {
 	playlistid = playlistid.split(':');
 	playlistid = playlistid[playlistid.length - 1];
 	
-	var options = {
+	const options = {
 		method: 'PUT',
-		url: 'https://api.spotify.com/v1/users/' + inObj.ownerid + '/playlists/' + playlistid + '/followers',
+		url: `https://api.spotify.com/v1/users/${inObj.ownerid}/playlists/${playlistid}/followers`,
 		headers: {
-			'Authorization': 'Bearer ' + inObj.friendtoken,
+			'Authorization': `Bearer ${inObj.friendtoken}`,
 			'Content-Type' : 'application/json'
 		},
 		json: true
@@ -210,11 +210,11 @@ function createOurPlaylist(inObj) {
 }
 
 function getMyId(token) {
-	var options = {
+	const options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me',
 		headers: {
-			'Authorization': 'Bearer ' + token
+			'Authorization': `Bearer ${token}`
 		},
 		json: true
 	};
@@ -224,7 +224,7 @@ function getMyId(token) {
 }
 
 function makeEndpoint(name, username, token, data, collab) {
-	var reqbod = {
+	const reqbod = {
 		name: name,
 	};
 
@@ -233,12 +233,12 @@ function makeEndpoint(name, username, token, data, collab) {
 		reqbod.collaborative = true;
 	}
 
-	var options = {
+	const options = {
 		method: 'POST',
 		form: JSON.stringify(reqbod),
-		url: 'https://api.spotify.com/v1/users/' + username + '/playlists',
+		url: `https://api.spotify.com/v1/users/${username}/playlists`,
 		headers: {
-			'Authorization': 'Bearer ' + token,
+			'Authorization': `Bearer ${token}`,
 			'Content-Type' : 'application/json'
 		},
 		json: true
@@ -269,7 +269,7 @@ function addSongs(inObj) {
 
 	var promiseArr = [];
 
-	var numtimes = Math.ceil(totalsongs/100);
+	const numtimes = Math.ceil(totalsongs/100);
 
 	for (let i = 0; i < numtimes; i++) {
 		let startind = i*100;
@@ -285,12 +285,12 @@ function addSongs(inObj) {
 }
 
 function postTracks(token, userid, tracks, playlistid) {
-	var options = {
+	const options = {
 		method: 'POST',
 		form: JSON.stringify({uris: tracks}),
-		url: 'https://api.spotify.com/v1/users/' + userid + '/playlists/' + playlistid + '/tracks',
+		url: `https://api.spotify.com/v1/users/${userid}/playlists/${playlistid}/tracks`,
 		headers: {
-			'Authorization': 'Bearer ' + token,
+			'Authorization': `Bearer ${token}`,
 			'Content-Type' : 'application/json'
 		},
 		json: true
@@ -300,7 +300,7 @@ function postTracks(token, userid, tracks, playlistid) {
 }
 
 function cleanup(data) {
-	return [...data].map(x => 'spotify:track:' + x);
+	return [...data].map(x => `spotify:track:${x}`);
 }
 
 function getCommonIds(inObj) {
@@ -329,7 +329,7 @@ function getCommonIds(inObj) {
 }
 
 function getFriendData(toks, friend) {
-	var name = 'users/' + friend;
+	const name = `users/${friend}`;
 	return getTotalPlaylists(toks[0], name)
 		.then(getPlaylistObjects)
 		.then(getTotalPlaylistTrackObjects)
@@ -342,10 +342,12 @@ function getFriendData(toks, friend) {
 }
 
 function getTotalPlaylists(token, username) {
-	var options = {
+	const options = {
 		method: 'GET',
-		url: 'https://api.spotify.com/v1/' + username + '/playlists?',
-		headers: { 'Authorization': 'Bearer ' + token },
+		url: `https://api.spotify.com/v1/${username}/playlists?`,
+		headers: {
+			'Authorization': `Bearer ${token}`
+		},
 		json: true
 	};
 
@@ -376,10 +378,12 @@ function getPlaylistObjects(inObj) {
 }
 
 function playlistObjectRequest(token, params, username) {
-	var options = {
+	const options = {
 		method: 'GET',
-		url: 'https://api.spotify.com/v1/' + username +'/playlists?' + params + '',
-		headers: { 'Authorization': 'Bearer ' + token },
+		url: `https://api.spotify.com/v1/${username}/playlists?${params}`,
+		headers: {
+			'Authorization': `Bearer ${token}`
+		},
 		json: true
 	};
 
@@ -456,10 +460,12 @@ function getMyData (toks) {
 }
 
 function getTotalSavedTracks(token) {
-	var options = {
+	const options = {
 		method: 'GET',
 		url: 'https://api.spotify.com/v1/me/tracks?',
-		headers: { 'Authorization': 'Bearer ' + token },
+		headers: {
+			'Authorization': `Bearer ${token}`
+		},
 		json: true
 	};
 
@@ -483,10 +489,12 @@ function getSavedTrackObjects(inObj) {
 }
 
 function trackObjectRequest(token, params) {
-	var options = {
+	const options = {
 		method: 'GET',
-		url: 'https://api.spotify.com/v1/me/tracks?' + params + '',
-		headers: { 'Authorization': 'Bearer ' + token },
+		url: `https://api.spotify.com/v1/me/tracks?${params}`,
+		headers: {
+			'Authorization': `Bearer ${token}`
+		},
 		json: true
 	};
 
@@ -501,7 +509,7 @@ function getTotalPlaylistTrackObjects(inObj) {
 	var objArray = [];
 	var promiseArr = [];
 
-	for (var i = 0; i < data.length; i++) {
+	for (let i = 0; i < data.length; i++) {
 		let obj = {
 			token: token,
 			totalplaylisttracks: data[i].total,
@@ -530,10 +538,12 @@ function getObjectsFromPlaylist(inObj) {
 }
 
 function playlistTrackObjectRequest(token, params, href) {
-	var options = {
+	const options = {
 		method: 'GET',
-		url: href + '?' + params,
-		headers: { 'Authorization': 'Bearer ' + token },
+		url: `${href}?${params}`,
+		headers: {
+			'Authorization': `Bearer ${token}`
+		},
 		json: true
 	};
 
@@ -564,7 +574,7 @@ function getInitialTokens(req, res) {
 	}
 	else {
 		res.clearCookie(stateKey);
-		let authOptions = {
+		const authOptions = {
 			method: 'POST',
 			url: 'https://accounts.spotify.com/api/token',
 			form: {
@@ -573,7 +583,7 @@ function getInitialTokens(req, res) {
 				grant_type: 'authorization_code'
 			},
 			headers: {
-				'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
+				'Authorization': 'Basic ' + (new Buffer(`${client_id}:${client_secret}`).toString('base64'))
 			},
 			json: true
 		};
@@ -594,9 +604,9 @@ app.listen(8889, () => {
  */
 function generateRandomString(length) {
 	var text = '';
-	var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-	for (var i = 0; i < length; i++) {
+	for (let i = 0; i < length; i++) {
 		text += possible.charAt(Math.floor(Math.random() * possible.length));
 	}
 	return text;
@@ -607,7 +617,7 @@ function loopingRequest(requester, token, total, other) {
 	var promiseArr = [];
 
 	var prevoffset = -50;
-	var numtimes = Math.ceil(total/50);
+	const numtimes = Math.ceil(total/50);
 
 	for (let i = 0; i < numtimes; i++) {
 		let paramobj = {
