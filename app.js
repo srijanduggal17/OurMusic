@@ -59,6 +59,7 @@ function generateRandomString(length) {
 	return text;
 }
 
+
 /**
  * Directs user to Spotify's login page
  * @param  {Object} req - Request from login button
@@ -456,6 +457,7 @@ function mainCallback(req, res) {
 		.then(toks => {
 			databaseKey = database.ref().push();
 			databaseKey.child('tokens').set(toks);
+			databaseKey.child('time').set(firebase.database.ServerValue.TIMESTAMP);
 			var locationRef = databaseKey.toString();
 			locationRef = locationRef.split('/');
 			locationRef = locationRef[locationRef.length - 1];
@@ -545,6 +547,8 @@ function getMyUserId(token) {
 	return rp(bodyParams)
 		.then(body => body.id);
 }
+
+
 
 /**
  * Creates a new empty playlist
@@ -759,6 +763,7 @@ function friendMainCallback (req, res) {
 
 app.get('/finish', friendMainCallback);
 
+
 /**
  * Gets all of the friend's songs from public playlists
  * @param  {string} toks - Main user's access tokens
@@ -878,4 +883,3 @@ app.get('/completion', clearDatabaseReference);
 app.listen(8889, () => {
 	console.log('Listening on 8889');
 });
-

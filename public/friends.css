@@ -3,6 +3,7 @@
 * {
 	font-family: 'Montserrat', sans-serif;
 	color: white;
+	-webkit-appearance: none;
 }
 
 html {
@@ -51,14 +52,14 @@ h3 {
 	grid-template-columns: .5fr 4fr .5fr;
 	grid-template-rows: 2fr 1fr .8fr 1.5fr 1fr .5fr 1.5fr 1fr 2fr;
 	grid-template-areas: "leftside top rightside"
-						 "leftside playlist rightside"
-						 "leftside header rightside"
-						 "leftside public rightside"
-						 "leftside publicButton rightside"
-						 "leftside orSection rightside"
-						 "leftside loginButton rightside"
-						 "leftside rightButton rightside"
-						 "leftside bottom rightside";
+	"leftside playlist rightside"
+	"leftside header rightside"
+	"leftside public rightside"
+	"leftside publicButton rightside"
+	"leftside orSection rightside"
+	"leftside login rightside"
+	"leftside loginButton rightside"
+	"leftside bottom rightside";
 }
 
 #loading {
@@ -140,13 +141,13 @@ h3 {
 	margin-right: auto;
 	display: block;
 	border-radius: 1em;
-    background-color: #4CAF50;
-    border: none;
-    color: #e0e0e0;
-    padding: 2% 5%;
-    text-align: center;
-    font-size: 1em;
-    font-family: 'Roboto Mono', monospace;
+	background-color: #4CAF50;
+	border: none;
+	color: #e0e0e0;
+	padding: 2% 5%;
+	text-align: center;
+	font-size: 1em;
+	font-family: 'Roboto Mono', monospace;
 }
 
 .btn:hover {
@@ -167,11 +168,11 @@ h3 {
 		grid-template-columns: .1fr 1fr .2fr 1fr .1fr;
 		grid-template-rows: 1fr 1fr 1fr 1fr 1fr 1fr;
 		grid-template-areas: "leftside top top top rightside"
-							 "leftside playlist playlist playlist rightside"
-							 "leftside header header header rightside"
-							 "leftside public orSection login rightside"
-							 "leftside publicButton nothing loginButton rightside"
-							 "leftside bottom bottom bottom rightside";
+		"leftside playlist playlist playlist rightside"
+		"leftside header header header rightside"
+		"leftside public orSection login rightside"
+		"leftside publicButton nothing loginButton rightside"
+		"leftside bottom bottom bottom rightside";
 	}
 
 	#heading {
