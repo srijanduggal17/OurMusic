@@ -753,7 +753,7 @@ function friendMainCallback (req, res) {
 				uri: uri
 			};
 			res.cookie(stateKey, JSON.stringify(outCookie));
-			res.redirect('/completion');
+			res.redirect('/complete.html');
 		})
 		.catch(error => {
 			res.send('Internal Server Error');
@@ -835,12 +835,8 @@ function friendPublic(req, res) {
 				.then(getCommonIds)
 				.then(createMyPlaylist)
 				.then(uri => {
-					var outCookie = {
-						databaseRef: databaseRef,
-						uri: uri
-					};
-					res.cookie(stateKey, JSON.stringify(outCookie));
-					res.redirect('/completion');
+					res.cookie(stateKey, uri);
+					res.redirect('/complete.html');
 				})
 				.catch(error => {
 					res.send('Internal Server Error');
@@ -857,28 +853,37 @@ app.post('/friendpublic', friendPublic);
 
 
 /**
- * Remove's the user's temporary data from the database after the playlist is made
- * @param  {Object} req - Request after playlist has been made
- * @param {Object} req.cookies - Cookie containing the database endpoint and playlist endpoint
- * @param  {Object} res - Response to client
+ * Removes old data from the database
+ * @param  {Object} req Request from cron-job scheduler
+ * @param  {Object} res Response from server
  * @return {undefined}
  */
-function clearDatabaseReference(req, res) {
-	const cookieObj = JSON.parse(req.cookies[stateKey]);
-	database.ref(cookieObj.databaseRef).remove()
-		.then(() => {
-			res.clearCookie(stateKey);
-			res.cookie(stateKey, cookieObj.uri);
-			res.redirect('complete.html');
-		})
-		.catch(error => {
-			res.send('Internal Server Error');
-			throw error;
+function cleanupFunc(req, res) {
+	const difftime = 86400000;
+	database.ref('/jobtime').set(admin.database.ServerValue.TIMESTAMP);
+
+	database.ref()
+		.once('value')
+		.then(data => {
+			const allData = data.val();
+			const currenttime = allData.jobtime;
+
+			for (const user in allData) {
+				if (user != 'jobtime') {
+					const posttime = allData[user]['time'];
+					const diff = currenttime - posttime;
+					if (diff > difftime) {
+						database.ref(user).remove();
+					}
+				}
+			}
+
+			database.ref('/jobtime').remove();
+			res.send('Complete');
 		});
 }
 
-app.get('/completion', clearDatabaseReference);
-
+app.get('/cleanup', cleanupFunc);
 
 app.listen(8889, () => {
 	console.log('Listening on 8889');
