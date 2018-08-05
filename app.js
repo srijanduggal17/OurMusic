@@ -21,8 +21,8 @@ const rp = require('request-promise');
 const stateKey = '__session';
 const app = express();
 
-const client_id = '15ec5ccbf8d648378ecefdf8bab3f58d';
-const client_secret = 'e539d4691004402b94f6738517033dbf';
+const client_id = '';
+const client_secret = '';
 const redirect_uri = 'http://localhost:8889/callback/';
 
 const firebase = require('firebase');
