@@ -24,9 +24,9 @@ const rp = require('request-promise');
 const stateKey = '__session';
 const app = express();
 
-const client_id = '';
-const client_secret = '';
-const redirect_uri = '';
+const client_id = '15ec5ccbf8d648378ecefdf8bab3f58d';
+const client_secret = 'e539d4691004402b94f6738517033dbf';
+const redirect_uri = 'https://our-music-on-spotify.firebaseapp.com/callback/';
 
 const admin = require('firebase-admin');
 const config = functions.config().firebase;

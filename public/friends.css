@@ -127,6 +127,7 @@ h3 {
 	grid-area: publicButton;
 	justify-self: center;
 	align-self: center;
+	width: 5em;
 }
 
 #loginButton {
